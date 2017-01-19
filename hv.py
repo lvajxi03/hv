@@ -148,6 +148,8 @@ class HWindow(gtk.Window):
                 status = "File: %(fn)s, type: %(ty)s" % {'fn': fulln, 'ty': type}
                 if encoding is not None:
                     status = "%(st)s, encoding: %(enc)s" % {'st': status, 'enc': encoding}
+                if type.startswith("image/"):
+                    self.image.set_from_file(fulln)
             else:
                 status = "File: %(fn)s, type: %(ty)s" % {'fn': fulln, 'ty': 'unknown'}
             self.statusbar.push(0, status)
@@ -197,6 +199,8 @@ class HWindow(gtk.Window):
         self.statusbar = gtk.Statusbar()
         self.statusbar.push(0, "/hv/")
 
+        self.image = gtk.Image()
+
         hpaned = gtk.HPaned()
         vpaned = gtk.VPaned()
 
@@ -204,7 +208,7 @@ class HWindow(gtk.Window):
         vpaned.add2(sv2)
 
         hpaned.add1(vpaned)
-        hpaned.add2(gtk.TextView())
+        hpaned.add2(self.image)
 
         vbox = gtk.VBox(False, 2)
         vbox.pack_start(menu_bar, False, False, 0)
