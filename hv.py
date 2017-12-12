@@ -14,7 +14,7 @@ try:
     import string
     from ctypes import windll
     have_windows = True
-except ImportError as ie:
+except ImportError:
     pass
 
 
@@ -114,17 +114,29 @@ class HWindow(gtk.Window):
         self.filemodel.clear()
         self.dirmodel.clear()
 
+        files = []
         for f in getfiles(dirname):
+            files.append(f)
+
+        files.sort()
+        for f in files:
             self.filemodel.append([f])
         self.dirmodel.append(["."])
         self.dirmodel.append([".."])
+
+        dirs = []
         for d in getdirs(dirname):
+            dirs.append(d)
+
+        dirs.sort()
+        for d in dirs:
             self.dirmodel.append([d])
         for drive in get_drives():
             self.dirmodel.append(["%(letter)s:\\" % {'letter': drive}])
 
     def __init__(self):
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
+        self.connect("destroy", self.quit)
         self.create_ui()
 
     def quit(self, data=None):
@@ -242,4 +254,7 @@ class HWindow(gtk.Window):
 if __name__ == "__main__":
     hw = HWindow()
     hw.show()
-    gtk.main()
+    try:
+        gtk.main()
+    except KeyboardInterrupt:
+        print("Bye!")
