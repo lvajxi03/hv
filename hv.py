@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-import gtk, gobject, mimetypes
+import gtk
+import gobject
+import mimetypes
 import os
 
 
@@ -15,6 +17,7 @@ try:
 except ImportError as ie:
     pass
 
+
 def get_drives():
     drives = []
     if have_windows:
@@ -25,13 +28,16 @@ def get_drives():
             bitmask >>= 1
     return drives
 
-def getfiles(curdir = "."):
+
+def getfiles(curdir="."):
     return [f for f in os.listdir(curdir) if os.path.isfile(f)]
 
-def getdirs(curdir = "."):
+
+def getdirs(curdir="."):
     return [f for f in os.listdir(curdir) if os.path.isdir(f)]
 
-def saveconfig(configuration = {}):
+
+def saveconfig(configuration={}):
     fh = open(os.path.join(os.path.expanduser("~"), ".hvrc"), "w")
     cp = ConfigParser.ConfigParser()
     for key in configuration:
@@ -40,6 +46,7 @@ def saveconfig(configuration = {}):
             cp.set(key, subkey, configuration[key][subkey])
     cp.write(fh)
     fh.close()
+
 
 def readconfig():
     configuration = {}
@@ -52,9 +59,10 @@ def readconfig():
             for tuple in cp.items(section):
                 configuration[section][tuple[0]] = tuple[1]
         fh.close()
-    except IOError as ioe:
+    except IOError:
         pass
     return configuration
+
 
 class HWindow(gtk.Window):
 
@@ -75,34 +83,34 @@ class HWindow(gtk.Window):
         configuration['browser']['h'] = "%(h)d" % {'h': r.height}
         return configuration
 
-    def set_configuration(self, configuration = {}):
+    def set_configuration(self, configuration={}):
         try:
             x = int(configuration['window']['x'])
             y = int(configuration['window']['y'])
             self.move(x, y)
-        except KeyError as ke:
+        except KeyError:
             pass
         try:
             w = int(configuration['window']['w'])
             h = int(configuration['window']['h'])
             self.resize(w, h)
-        except KeyError as ke:
+        except KeyError:
             pass
         try:
             ld = configuration['browser']['lastdir']
-            os.chdir(configuration['browser']['lastdir'])
-        except KeyError as ke:
+            os.chdir(ld)
+        except KeyError:
             pass
-        except IOError as ioe:
+        except IOError:
             pass
         try:
             w = int(configuration['browser']['w'])
             h = int(configuration['browser']['h'])
             self.sv1.set_size_request(w, h)
-        except KeyError as ke:
+        except KeyError:
             pass
 
-    def read_dir(self, dirname = "."):
+    def read_dir(self, dirname="."):
         self.filemodel.clear()
         self.dirmodel.clear()
 
@@ -119,11 +127,11 @@ class HWindow(gtk.Window):
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.create_ui()
 
-    def quit(self, data = None):
+    def quit(self, data=None):
         saveconfig(self.get_configuration())
         gtk.main_quit()
 
-    def dir_activated(self, treeview, path, column, user_data = None):
+    def dir_activated(self, treeview, path, column, user_data=None):
         sel = treeview.get_selection()
         (model, iter) = sel.get_selected()
         # Dirname is under model[iter][0]
@@ -132,7 +140,7 @@ class HWindow(gtk.Window):
         self.read_dir()
         self.set_title("%(d)s - /hv/" % {'d': os.getcwd()})
 
-    def file_activated(self, treeview, path, column, user_data = None):
+    def file_activated(self, treeview, path, column, user_data=None):
         sel = treeview.get_selection()
         (model, iter) = sel.get_selected()
         if iter is not None:
@@ -145,13 +153,20 @@ class HWindow(gtk.Window):
             fulln = os.path.join(os.getcwd(), filename)
             (type, encoding) = mimetypes.guess_type(fulln)
             if type is not None:
-                status = "File: %(fn)s, type: %(ty)s" % {'fn': fulln, 'ty': type}
+                status = "File: %(fn)s, type: %(ty)s" \
+                         % {
+                             'fn': fulln,
+                             'ty': type}
                 if encoding is not None:
-                    status = "%(st)s, encoding: %(enc)s" % {'st': status, 'enc': encoding}
+                    status = "%(st)s, encoding: %(enc)s" \
+                             % {'st': status,
+                                'enc': encoding}
                 if type.startswith("image/"):
                     self.image.set_from_file(fulln)
             else:
-                status = "File: %(fn)s, type: %(ty)s" % {'fn': fulln, 'ty': 'unknown'}
+                status = "File: %(fn)s, type: %(ty)s" \
+                         % {'fn': fulln,
+                            'ty': 'unknown'}
             self.statusbar.push(0, status)
 
     def create_ui(self):
@@ -187,10 +202,10 @@ class HWindow(gtk.Window):
         filesel.connect('changed', self.file_changed)
 
         ren1 = gtk.CellRendererText()
-        col1 = gtk.TreeViewColumn("Directory name", ren1, text = 0)
+        col1 = gtk.TreeViewColumn("Directory name", ren1, text=0)
         self.dirlist.append_column(col1)
         ren2 = gtk.CellRendererText()
-        col2 = gtk.TreeViewColumn("File name", ren2, text = 0)
+        col2 = gtk.TreeViewColumn("File name", ren2, text=0)
         self.filelist.append_column(col2)
 
         self.sv1.add_with_viewport(self.dirlist)
@@ -222,6 +237,7 @@ class HWindow(gtk.Window):
         self.show_all()
         self.set_configuration(readconfig())
         self.read_dir()
+
 
 if __name__ == "__main__":
     hw = HWindow()
