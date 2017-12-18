@@ -4,11 +4,11 @@ import gtk
 import gobject
 import mimetypes
 import os
-
-
 import ConfigParser
 
 have_windows = False
+DEFAULT_MASKS = "*.jpg|*.jpeg|*.png|*.gif|*.bmp|" + \
+                "*.pcx|*.svg|*ico.|*.tiff|*.tif|*.ppm|*.pnm"
 
 try:
     import string
@@ -62,6 +62,112 @@ def readconfig():
     except IOError:
         pass
     return configuration
+
+
+class HSettings(gtk.Dialog):
+
+    def __init__(self):
+        gtk.Dialog.__init__(self,
+                            "Preferences",
+                            None,
+                            gtk.DIALOG_MODAL,
+                            (gtk.STOCK_CANCEL,
+                             gtk.RESPONSE_REJECT,
+                             gtk.STOCK_OK,
+                             gtk.RESPONSE_ACCEPT))
+        frame = gtk.Frame(label="Accepted file masks")
+        self.vbox.pack_start(frame)
+        vbox = gtk.VBox()
+        frame.add(vbox)
+        self.masks = gtk.CheckButton("Accept following file masks:")
+        self.masks.connect("toggled", self.toggle_filemasks)
+        vbox.pack_start(self.masks)
+        self.entry = gtk.Entry()
+        self.entry.set_text(DEFAULT_MASKS)
+        self.entry.set_sensitive(False)
+        vbox.pack_start(self.entry)
+        hbox = gtk.HBox()
+        self.vbox.pack_start(hbox)
+        vbox1 = gtk.VBox()
+        hbox.pack_start(vbox1)
+        frame = gtk.Frame(label="Background")
+        vbox1.pack_start(frame)
+        vbox = gtk.VBox()
+        frame.add(vbox)
+        radio = gtk.RadioButton(None, "None")
+        vbox.pack_start(radio)
+        radio = gtk.RadioButton(radio, "White")
+        vbox.pack_start(radio)
+        radio = gtk.RadioButton(radio, "Black")
+        vbox.pack_start(radio)
+        radio = gtk.RadioButton(radio, "Checkered")
+        vbox.pack_start(radio)
+        vbox1 = gtk.VBox()
+        hbox.pack_start(vbox1)
+        frame = gtk.Frame("Settings")
+        vbox1.pack_start(frame)
+        vbox = gtk.VBox()
+        frame.add(vbox)
+        self.centered = gtk.CheckButton("Centered")
+        vbox.pack_start(self.centered)
+        self.aspect = gtk.CheckButton("Keep aspect ratio")
+        vbox.pack_start(self.aspect)
+        self.maximize = gtk.CheckButton("Zoom to fit")
+        vbox.pack_start(self.maximize)
+        self.shrink = gtk.CheckButton("Shrink to fit")
+        vbox.pack_start(self.shrink)
+        self.set_title("Preferences")
+        self.set_has_separator(True)
+        self.set_size_request(640, 256)
+        self.show_all()
+
+    def toggle_filemasks(self, widget, data=None):
+        self.entry.set_sensitive(widget.get_active())
+
+    def is_centered(self):
+        return self.centered.get_active()
+
+    def set_centered(self, centered=True):
+        self.centered.set_active(centered)
+
+    def is_aspect(self):
+        return self.aspect.get_active()
+
+    def set_aspect(self, aspect=True):
+        self.aspect.set_active(aspect)
+
+    def is_maximize(self):
+        return self.maximize.get_active()
+
+    def set_maximize(self, maximize=True):
+        self.maximize.set_active(maximize)
+
+    def get_filemasks(self):
+        return self.entry.get_text() if self.masks.get_active() else ""
+
+    def set_filemasks(self, masks):
+        if masks:
+            self.entry = masks
+            self.masks.set_active(True)
+
+    def get_config(self):
+        config = {}
+        config['filemasks'] = self.get_filemasks()
+        config['centered'] = self.is_centered()
+        config['aspect'] = self.is_aspect()
+        config['maximize'] = self.is_maximize()
+        return config
+
+    def set_config(self, config={}):
+        if 'filemasks' in config:
+            self.set_filemasks(config['filemasks'])
+        if 'centered' in config:
+            self.set_centered(config['centered'])
+        if 'aspect' in config:
+            self.set_aspect(config['aspect'])
+        if 'maximize' in config:
+            self.set_maximize(config['maximize'])
+        pass
 
 
 class HWindow(gtk.Window):
@@ -181,11 +287,19 @@ class HWindow(gtk.Window):
                             'ty': 'unknown'}
             self.statusbar.push(0, status)
 
+    def show_settings(self, data=None):
+        s_window = HSettings()
+        response = s_window.run()
+        s_window.destroy()
+
     def create_ui(self):
         menu_bar = gtk.MenuBar()
-        menu_item = gtk.MenuItem("_File")
+        menu_item = gtk.MenuItem("_hv")
         menu = gtk.Menu()
         menu_item.set_submenu(menu)
+        menu_subitem = gtk.MenuItem("_Preferences")
+        menu_subitem.connect('activate', self.show_settings)
+        menu.append(menu_subitem)
         menu_subitem = gtk.MenuItem("_Quit")
         menu_subitem.connect('activate', self.quit)
         menu.append(menu_subitem)
