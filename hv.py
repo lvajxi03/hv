@@ -103,6 +103,8 @@ class HWindow(gtk.Window):
             pass
         except IOError:
             pass
+        except WindowsError:
+            pass
         try:
             w = int(configuration['browser']['w'])
             h = int(configuration['browser']['h'])
