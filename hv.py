@@ -4,11 +4,16 @@ import gtk
 import gobject
 import mimetypes
 import os
-
-
 import ConfigParser
 
 have_windows = False
+DEFAULT_MASKS = "*.jpg|*.jpeg|*.png|*.gif|*.bmp|" + \
+                "*.pcx|*.svg|*ico.|*.tiff|*.tif|*.ppm|*.pnm"
+BACKGROUND_NONE = 0
+BACKGROUND_WHITE = 1
+BACKGROUND_BLACK = 2
+BACKGROUND_CHECKERED = 3
+BACKGROUND_CUSTOM = 4
 
 try:
     import string
@@ -61,7 +66,157 @@ def readconfig():
         fh.close()
     except IOError:
         pass
+    # Saturday night specials:
+    if 'settings' in configuration:
+        for key in ['centered', 'aspect', 'maximize', 'shrink']:
+            if configuration['settings'][key] == 'True':
+                configuration['settings'][key] = True
+            else:
+                configuration['settings'][key] = False
     return configuration
+
+
+class HSettings(gtk.Dialog):
+
+    def __init__(self):
+        gtk.Dialog.__init__(self,
+                            "Preferences",
+                            None,
+                            gtk.DIALOG_MODAL,
+                            (gtk.STOCK_CANCEL,
+                             gtk.RESPONSE_REJECT,
+                             gtk.STOCK_OK,
+                             gtk.RESPONSE_ACCEPT))
+        frame = gtk.Frame(label="Accepted file masks")
+        self.vbox.pack_start(frame)
+        vbox = gtk.VBox()
+        frame.add(vbox)
+        self.masks = gtk.CheckButton("Accept following file masks:")
+        self.masks.connect("toggled", self.toggle_filemasks)
+        vbox.pack_start(self.masks)
+        self.entry = gtk.Entry()
+        self.entry.set_text(DEFAULT_MASKS)
+        self.entry.set_sensitive(False)
+        vbox.pack_start(self.entry)
+        hbox = gtk.HBox()
+        self.vbox.pack_start(hbox)
+        vbox1 = gtk.VBox()
+        hbox.pack_start(vbox1)
+        frame = gtk.Frame(label="Background")
+        vbox1.pack_start(frame)
+        vbox = gtk.VBox()
+        frame.add(vbox)
+        self.radio1 = gtk.RadioButton(None, "None")
+        vbox.pack_start(self.radio1)
+        self.radio2 = gtk.RadioButton(self.radio1, "White")
+        vbox.pack_start(self.radio2)
+        self.radio3 = gtk.RadioButton(self.radio1, "Black")
+        vbox.pack_start(self.radio3)
+        self.radio4 = gtk.RadioButton(self.radio1, "Checkered")
+        vbox.pack_start(self.radio4)
+        vbox1 = gtk.VBox()
+        hbox.pack_start(vbox1)
+        frame = gtk.Frame("Settings")
+        vbox1.pack_start(frame)
+        vbox = gtk.VBox()
+        frame.add(vbox)
+        self.centered = gtk.CheckButton("Centered")
+        vbox.pack_start(self.centered)
+        self.aspect = gtk.CheckButton("Keep aspect ratio")
+        vbox.pack_start(self.aspect)
+        self.maximize = gtk.CheckButton("Zoom to fit")
+        vbox.pack_start(self.maximize)
+        self.shrink = gtk.CheckButton("Shrink to fit")
+        vbox.pack_start(self.shrink)
+        self.set_title("Preferences")
+        self.set_has_separator(True)
+        self.set_size_request(640, 256)
+        self.show_all()
+
+    def toggle_filemasks(self, widget, data=None):
+        self.entry.set_sensitive(self.masks.get_active())
+
+    def is_centered(self):
+        return self.centered.get_active()
+
+    def set_centered(self, centered=True):
+        self.centered.set_active(centered)
+
+    def is_aspect(self):
+        return self.aspect.get_active()
+
+    def set_aspect(self, aspect=True):
+        self.aspect.set_active(aspect)
+
+    def is_maximize(self):
+        return self.maximize.get_active()
+
+    def set_maximize(self, maximize=True):
+        self.maximize.set_active(maximize)
+
+    def get_filemasks(self):
+        return self.entry.get_text() if self.masks.get_active() else ""
+
+    def get_background(self):
+        if self.radio1.get_active():
+            return BACKGROUND_NONE
+        elif self.radio2.get_active():
+            return BACKGROUND_WHITE
+        elif self.radio3.get_active():
+            return BACKGROUND_BLACK
+        elif self.radio4.get_active():
+            return BACKGROUND_CHECKERED
+        else:
+            return BACKGROUND_NONE
+
+    def set_background(self, background):
+        if background == BACKGROUND_WHITE:
+            self.radio2.set_active(True)
+        elif background == BACKGROUND_BLACK:
+            self.radio3.set_active(True)
+        elif background == BACKGROUND_CHECKERED:
+            self.radio4.set_active(True)
+        else:
+            self.radio1.set_active(True)
+
+    def set_filemasks(self, masks):
+        if masks:
+            self.entry.set_text(masks)
+            self.masks.set_active(True)
+
+    def set_shrink(self, shrink=True):
+        self.shrink.set_active(shrink)
+
+    def is_shrink(self):
+        return self.shrink.get_active()
+
+    def get_config(self):
+        config = {}
+        config['filemasks'] = self.get_filemasks()
+        config['centered'] = self.is_centered()
+        config['aspect'] = self.is_aspect()
+        config['maximize'] = self.is_maximize()
+        config['shrink'] = self.is_shrink()
+        config['background'] = "%(b)d" % {'b': self.get_background()}
+        return config
+
+    def set_config(self, config={}):
+        if 'filemasks' in config:
+            self.set_filemasks(config['filemasks'])
+        if 'centered' in config:
+            self.set_centered(config['centered'])
+        if 'aspect' in config:
+            self.set_aspect(config['aspect'])
+        if 'maximize' in config:
+            self.set_maximize(config['maximize'])
+        if 'shrink' in config:
+            self.set_shrink(config['shrink'])
+        if 'background' in config:
+            try:
+                bg = int(config['background'])
+                self.set_background(bg)
+            except ValueError:
+                self.set_background(BACKGROUND_NONE)
 
 
 class HWindow(gtk.Window):
@@ -78,9 +233,9 @@ class HWindow(gtk.Window):
         configuration['browser'] = {}
         configuration['browser']['lastdir'] = os.getcwd()
         r = self.sv1.get_allocation()
-#        (w, h) = self.sv1.size_request()
         configuration['browser']['w'] = "%(w)d" % {'w': r.width}
         configuration['browser']['h'] = "%(h)d" % {'h': r.height}
+        configuration['settings'] = self.settings
         return configuration
 
     def set_configuration(self, configuration={}):
@@ -111,6 +266,10 @@ class HWindow(gtk.Window):
             self.sv1.set_size_request(w, h)
         except KeyError:
             pass
+        try:
+            self.settings = configuration['settings']
+        except KeyError:
+            pass
 
     def read_dir(self, dirname="."):
         self.filemodel.clear()
@@ -138,6 +297,7 @@ class HWindow(gtk.Window):
 
     def __init__(self):
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
+        self.settings = {}
         self.connect("destroy", self.quit)
         self.create_ui()
 
@@ -152,7 +312,7 @@ class HWindow(gtk.Window):
         newdir = os.path.join(os.getcwd(), model[iter][0])
         os.chdir(newdir)
         self.read_dir()
-        self.set_title("%(d)s - /hv/" % {'d': os.getcwd()})
+        self.update_title()
 
     def file_activated(self, treeview, path, column, user_data=None):
         sel = treeview.get_selection()
@@ -183,11 +343,22 @@ class HWindow(gtk.Window):
                             'ty': 'unknown'}
             self.statusbar.push(0, status)
 
+    def show_settings(self, data=None):
+        s_window = HSettings()
+        s_window.set_config(self.settings)
+        response = s_window.run()
+        if response == gtk.RESPONSE_ACCEPT:
+            self.settings = s_window.get_config()
+        s_window.destroy()
+
     def create_ui(self):
         menu_bar = gtk.MenuBar()
-        menu_item = gtk.MenuItem("_File")
+        menu_item = gtk.MenuItem("_hv")
         menu = gtk.Menu()
         menu_item.set_submenu(menu)
+        menu_subitem = gtk.MenuItem("_Preferences")
+        menu_subitem.connect('activate', self.show_settings)
+        menu.append(menu_subitem)
         menu_subitem = gtk.MenuItem("_Quit")
         menu_subitem.connect('activate', self.quit)
         menu.append(menu_subitem)
@@ -245,12 +416,15 @@ class HWindow(gtk.Window):
         vbox.pack_start(self.statusbar, False, False, 0)
 
         self.add(vbox)
-        self.set_title("%(d)s - /hv/" % {'d': os.getcwd()})
         self.resize(800, 600)
 
         self.show_all()
         self.set_configuration(readconfig())
         self.read_dir()
+        self.update_title()
+
+    def update_title(self):
+        self.set_title("%(d)s - /hv/" % {'d': os.getcwd()})
 
 
 if __name__ == "__main__":
