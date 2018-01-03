@@ -337,10 +337,17 @@ class HWindow(gtk.Window):
                                 'enc': encoding}
                 if type.startswith("image/"):
                     self.image.set_from_file(fulln)
+                else:
+                    self.image.set_from_stock(
+                        gtk.STOCK_MISSING_IMAGE,
+                        gtk.ICON_SIZE_LARGE_TOOLBAR)
             else:
                 status = "File: %(fn)s, type: %(ty)s" \
                          % {'fn': fulln,
                             'ty': 'unknown'}
+                self.image.set_from_stock(
+                    gtk.STOCK_MISSING_IMAGE,
+                    gtk.ICON_SIZE_LARGE_TOOLBAR)
             self.statusbar.push(0, status)
 
     def show_settings(self, data=None):
@@ -408,7 +415,10 @@ class HWindow(gtk.Window):
         vpaned.add2(sv2)
 
         hpaned.add1(vpaned)
-        hpaned.add2(self.image)
+        sv3 = gtk.ScrolledWindow()
+        sv3.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sv3.add_with_viewport(self.image)
+        hpaned.add2(sv3)
 
         vbox = gtk.VBox(False, 2)
         vbox.pack_start(menu_bar, False, False, 0)
@@ -418,10 +428,10 @@ class HWindow(gtk.Window):
         self.add(vbox)
         self.resize(800, 600)
 
-        self.show_all()
         self.set_configuration(readconfig())
         self.read_dir()
         self.update_title()
+        self.show_all()
 
     def update_title(self):
         self.set_title("%(d)s - /hv/" % {'d': os.getcwd()})
