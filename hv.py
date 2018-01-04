@@ -4,6 +4,7 @@ import gtk
 import gobject
 import mimetypes
 import os
+import fnmatch
 import ConfigParser
 
 have_windows = False
@@ -34,12 +35,24 @@ def get_drives():
     return drives
 
 
-def getfiles(curdir="."):
-    return [f for f in os.listdir(curdir) if os.path.isfile(f)]
+def getfiles(curdir=".", masks=[]):
+    all = [f for f in os.listdir(curdir) if os.path.isfile(f)]
+    all.sort()
+    if len(masks) > 0:
+        files = []
+        for f in all:
+            for mask in masks:
+                if fnmatch.fnmatch(f, mask):
+                    files.append(f)
+        return files
+    else:
+        return all
 
 
 def getdirs(curdir="."):
-    return [f for f in os.listdir(curdir) if os.path.isdir(f)]
+    dirs = [f for f in os.listdir(curdir) if os.path.isdir(f)]
+    dirs.sort()
+    return dirs
 
 
 def saveconfig(configuration={}):
@@ -270,28 +283,22 @@ class HWindow(gtk.Window):
             self.settings = configuration['settings']
         except KeyError:
             pass
+        if 'filemasks' in self.settings:
+            self.masks = self.settings['filemasks'].split("|")
 
     def read_dir(self, dirname="."):
         self.filemodel.clear()
         self.dirmodel.clear()
 
-        files = []
-        for f in getfiles(dirname):
-            files.append(f)
-
-        files.sort()
-        for f in files:
+        for f in getfiles(dirname, self.masks):
             self.filemodel.append([f])
+
         self.dirmodel.append(["."])
         self.dirmodel.append([".."])
 
-        dirs = []
         for d in getdirs(dirname):
-            dirs.append(d)
-
-        dirs.sort()
-        for d in dirs:
             self.dirmodel.append([d])
+
         for drive in get_drives():
             self.dirmodel.append(["%(letter)s:\\" % {'letter': drive}])
         self.current = ""
