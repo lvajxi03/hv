@@ -336,6 +336,10 @@ class HWindow(gtk.Window):
                              % {'st': status,
                                 'enc': encoding}
                 if type.startswith("image/"):
+                    if self.settings['centered']:
+                        self.image.set_alignment(0.5, 0.5)
+                    else:
+                        self.image.set_alignment(0, 0)
                     self.image.set_from_file(fulln)
                 else:
                     self.image.set_from_stock(
