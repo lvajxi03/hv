@@ -294,10 +294,13 @@ class HWindow(gtk.Window):
             self.dirmodel.append([d])
         for drive in get_drives():
             self.dirmodel.append(["%(letter)s:\\" % {'letter': drive}])
+        self.current = ""
 
     def __init__(self):
-        gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.settings = {}
+        self.masks = []
+        self.current = ""
+        gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.connect("destroy", self.quit)
         self.create_ui()
 
@@ -320,39 +323,43 @@ class HWindow(gtk.Window):
         if iter is not None:
             print "Activated", model[iter][0]
 
+    def display_image(self, filename):
+        (type, encoding) = mimetypes.guess_type(filename)
+        if type is not None:
+            status = "File: %(fn)s, type: %(ty)s" \
+                     % {
+                         'fn': filename,
+                         'ty': type}
+            if encoding is not None:
+                status = "%(st)s, encoding: %(enc)s" \
+                         % {'st': status,
+                            'enc': encoding}
+            if type.startswith("image/"):
+                if self.settings['centered']:
+                    self.image.set_alignment(0.5, 0.5)
+                else:
+                    self.image.set_alignment(0, 0)
+                self.image.set_from_file(filename)
+            else:
+                    self.image.set_from_stock(
+                        gtk.STOCK_MISSING_IMAGE,
+                        gtk.ICON_SIZE_LARGE_TOOLBAR)
+        else:
+            status = "File: %(fn)s, type: %(ty)s" \
+                     % {'fn': filename,
+                        'ty': 'unknown'}
+            self.image.set_from_stock(
+                gtk.STOCK_MISSING_IMAGE,
+                gtk.ICON_SIZE_LARGE_TOOLBAR)
+        self.statusbar.push(0, status)
+        self.current = filename
+
     def file_changed(self, selection):
         (model, iter) = selection.get_selected()
         if iter is not None:
             filename = model[iter][0]
             fulln = os.path.join(os.getcwd(), filename)
-            (type, encoding) = mimetypes.guess_type(fulln)
-            if type is not None:
-                status = "File: %(fn)s, type: %(ty)s" \
-                         % {
-                             'fn': fulln,
-                             'ty': type}
-                if encoding is not None:
-                    status = "%(st)s, encoding: %(enc)s" \
-                             % {'st': status,
-                                'enc': encoding}
-                if type.startswith("image/"):
-                    if self.settings['centered']:
-                        self.image.set_alignment(0.5, 0.5)
-                    else:
-                        self.image.set_alignment(0, 0)
-                    self.image.set_from_file(fulln)
-                else:
-                    self.image.set_from_stock(
-                        gtk.STOCK_MISSING_IMAGE,
-                        gtk.ICON_SIZE_LARGE_TOOLBAR)
-            else:
-                status = "File: %(fn)s, type: %(ty)s" \
-                         % {'fn': fulln,
-                            'ty': 'unknown'}
-                self.image.set_from_stock(
-                    gtk.STOCK_MISSING_IMAGE,
-                    gtk.ICON_SIZE_LARGE_TOOLBAR)
-            self.statusbar.push(0, status)
+            self.display_image(fulln)
 
     def show_settings(self, data=None):
         s_window = HSettings()
@@ -360,6 +367,11 @@ class HWindow(gtk.Window):
         response = s_window.run()
         if response == gtk.RESPONSE_ACCEPT:
             self.settings = s_window.get_config()
+            if 'masks' in self.settings:
+                if self.settings['masks']:
+                    self.masks = self.settings['masks'].split("|")
+            if self.current:
+                self.display_image(self.current)
         s_window.destroy()
 
     def create_ui(self):
