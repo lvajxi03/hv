@@ -4,6 +4,7 @@ import gtk
 import gobject
 import mimetypes
 import os
+import sys
 import fnmatch
 import ConfigParser
 
@@ -36,6 +37,10 @@ def get_drives():
 
 
 def getfiles(curdir=".", masks=[]):
+    try:
+        os.chdir(curdir)
+    except OSError:
+        pass
     all = [f for f in os.listdir(curdir) if os.path.isfile(f)]
     all.sort()
     if len(masks) > 0:
@@ -50,6 +55,10 @@ def getfiles(curdir=".", masks=[]):
 
 
 def getdirs(curdir="."):
+    try:
+        os.chdir(curdir)
+    except OSError:
+        pass
     dirs = [f for f in os.listdir(curdir) if os.path.isdir(f)]
     dirs.sort()
     return dirs
@@ -306,13 +315,13 @@ class HWindow(gtk.Window):
             self.dirmodel.append(["%(letter)s:\\" % {'letter': drive}])
         self.current = ""
 
-    def __init__(self):
+    def __init__(self, startupobj=""):
         self.settings = {}
         self.masks = []
         self.current = ""
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.connect("destroy", self.quit)
-        self.create_ui()
+        self.create_ui(startupobj)
 
     def quit(self, data=None):
         saveconfig(self.get_configuration())
@@ -387,7 +396,7 @@ class HWindow(gtk.Window):
                 self.display_image(self.current)
         s_window.destroy()
 
-    def create_ui(self):
+    def create_ui(self, startupobj = ""):
         menu_bar = gtk.MenuBar()
         menu_item = gtk.MenuItem("_hv")
         menu = gtk.Menu()
@@ -458,7 +467,17 @@ class HWindow(gtk.Window):
         self.resize(800, 600)
 
         self.set_configuration(readconfig())
-        self.read_dir()
+        if startupobj:
+            if os.path.isfile(startupobj):
+                dname = os.path.dirname(startupobj)
+                self.read_dir(dname)
+                self.display_image(startupobj)
+            elif os.path.isdir(startupobj):
+                self.read_dir(startupobj)
+            else:
+                self.read_dir()
+        else:
+            self.read_dir()
         self.update_title()
         self.show_all()
 
@@ -467,7 +486,11 @@ class HWindow(gtk.Window):
 
 
 if __name__ == "__main__":
-    hw = HWindow()
+    try:
+        so = sys.argv[1]
+    except IndexError:
+        so = ""
+    hw = HWindow(so)
     hw.show()
     try:
         gtk.main()
