@@ -82,9 +82,12 @@ def readconfig():
     # Saturday night specials:
     if 'settings' in configuration:
         for key in ['centered', 'aspect', 'maximize', 'shrink']:
-            if configuration['settings'][key] == 'True':
-                configuration['settings'][key] = True
-            else:
+            try:
+                if configuration['settings'][key] == 'True':
+                    configuration['settings'][key] = True
+                else:
+                    configuration['settings'][key] = False
+            except KeyError:
                 configuration['settings'][key] = False
     return configuration
 
@@ -342,10 +345,13 @@ class HWindow(gtk.Window):
                          % {'st': status,
                             'enc': encoding}
             if type.startswith("image/"):
-                if self.settings['centered']:
-                    self.image.set_alignment(0.5, 0.5)
+                if 'centered' in self.settings:
+                    if self.settings['centered']:
+                        self.image.set_alignment(0.5, 0.5)
+                    else:
+                        self.image.set_alignment(0, 0)
                 else:
-                    self.image.set_alignment(0, 0)
+                    self.image.set_alignment(0.5, 0.5)
                 self.image.set_from_file(filename)
             else:
                     self.image.set_from_stock(
