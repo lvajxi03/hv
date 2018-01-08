@@ -7,6 +7,7 @@ import os
 import sys
 import fnmatch
 import ConfigParser
+import glib
 
 have_windows = False
 DEFAULT_MASKS = "*.jpg|*.jpeg|*.png|*.gif|*.bmp|" + \
@@ -23,6 +24,24 @@ try:
     have_windows = True
 except ImportError:
     pass
+
+
+def read_image(filename):
+    try:
+        fh = open(filename, "rb")
+        data = fh.read()
+        fh.close()
+        loader = gtk.gdk.PixbufLoader()
+        if loader.write(data):
+            pixbuf = loader.get_pixbuf()
+            print pixbuf
+            loader.close()
+            return pixbuf
+    except IOError:
+        pass
+    except glib.GError:
+        pass
+    return None
 
 
 def get_drives():
@@ -361,7 +380,13 @@ class HWindow(gtk.Window):
                         self.image.set_alignment(0, 0)
                 else:
                     self.image.set_alignment(0.5, 0.5)
-                self.image.set_from_file(filename)
+                pixbuf = read_image(filename)
+                if pixbuf:
+                    self.image.set_from_pixbuf(pixbuf)
+                else:
+                    self.image.set_from_stock(
+                        gtk.STOCK_MISSING_IMAGE,
+                        gtk.ICON_SIZE_LARGE_TOOLBAR)
             else:
                     self.image.set_from_stock(
                         gtk.STOCK_MISSING_IMAGE,
