@@ -9,6 +9,7 @@ import fnmatch
 import ConfigParser
 import glib
 import zipfile
+import rsvg
 
 have_windows = False
 DEFAULT_MASKS = "*.jpg|*.jpeg|*.png|*.gif|*.bmp|" + \
@@ -63,9 +64,24 @@ def read_idraw_file(filename):
     return None
 
 
+def read_svg_file(filename):
+    try:
+        handle = rsvg.Handle(filename)
+        pixbuf = handle.get_pixbuf()
+        return pixbuf
+    except IOError:
+        pass
+    except OSError:
+        pass
+    except glib.GError:
+        pass
+    return None
+
+
 image_loaders = {
     'generic_image': read_generic_image,
-    '.idraw': read_idraw_file}
+    '.idraw': read_idraw_file,
+    '.svg': read_svg_file}
 
 
 def read_image(filename):
