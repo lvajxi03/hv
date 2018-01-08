@@ -9,7 +9,10 @@ import fnmatch
 import ConfigParser
 import glib
 import zipfile
-import rsvg
+try:
+    import rsvg
+except ImportError:
+    pass
 
 have_windows = False
 DEFAULT_MASKS = "*.jpg|*.jpeg|*.png|*.gif|*.bmp|" + \
@@ -75,6 +78,8 @@ def read_svg_file(filename):
         pass
     except glib.GError:
         pass
+    except NameError:
+        pass
     return None
 
 
@@ -91,7 +96,6 @@ def read_image(filename):
                 filename))[1].lower()
     except IndexError:
         suf = None
-    print suf
     if suf in image_loaders:
         return image_loaders[suf](filename)
     else:
@@ -372,6 +376,8 @@ class HWindow(gtk.Window):
             self.masks = self.settings['filemasks'].split("|")
 
     def read_dir(self, dirname="."):
+        if not dirname:
+            dirname = "."
         self.filemodel.clear()
         self.dirmodel.clear()
 
