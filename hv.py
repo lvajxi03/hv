@@ -8,10 +8,11 @@ import sys
 import fnmatch
 import ConfigParser
 import glib
+import zipfile
 
 have_windows = False
 DEFAULT_MASKS = "*.jpg|*.jpeg|*.png|*.gif|*.bmp|" + \
-                "*.pcx|*.svg|*ico.|*.tiff|*.tif|*.ppm|*.pnm"
+                "*.pcx|*.svg|*ico.|*.tiff|*.tif|*.ppm|*.pnm|*.idraw"
 BACKGROUND_NONE = 0
 BACKGROUND_WHITE = 1
 BACKGROUND_BLACK = 2
@@ -43,14 +44,38 @@ def read_generic_image(filename):
     return None
 
 
+def read_idraw_file(filename):
+    try:
+        zf = zipfile.ZipFile(filename)
+        tn = "Thumbnails/Preview.jpg"
+        data = zf.read(tn)
+        loader = gtk.gdk.PixbufLoader()
+        if loader.write(data):
+            pixbuf = loader.get_pixbuf()
+            loader.close()
+            return pixbuf
+    except KeyError:
+        pass
+    except zipfile.BadZipfile:
+        pass
+    except IOError:
+        pass
+    return None
+
+
 image_loaders = {
-    'generic_image': read_generic_image}
+    'generic_image': read_generic_image,
+    '.idraw': read_idraw_file}
 
 
 def read_image(filename):
-    suf = os.path.splitext(
-        os.path.basename(
-            filename))[0].lower()
+    try:
+        suf = os.path.splitext(
+            os.path.basename(
+                filename))[1].lower()
+    except IndexError:
+        suf = None
+    print suf
     if suf in image_loaders:
         return image_loaders[suf](filename)
     else:
@@ -376,38 +401,28 @@ class HWindow(gtk.Window):
 
     def display_image(self, filename):
         (type, encoding) = mimetypes.guess_type(filename)
-        if type is not None:
-            status = "File: %(fn)s, type: %(ty)s" \
-                     % {
-                         'fn': filename,
-                         'ty': type}
-            if encoding is not None:
-                status = "%(st)s, encoding: %(enc)s" \
-                         % {'st': status,
-                            'enc': encoding}
-            if type.startswith("image/"):
-                if 'centered' in self.settings:
-                    if self.settings['centered']:
-                        self.image.set_alignment(0.5, 0.5)
-                    else:
-                        self.image.set_alignment(0, 0)
-                else:
-                    self.image.set_alignment(0.5, 0.5)
-                pixbuf = read_image(filename)
-                if pixbuf:
-                    self.image.set_from_pixbuf(pixbuf)
-                else:
-                    self.image.set_from_stock(
-                        gtk.STOCK_MISSING_IMAGE,
-                        gtk.ICON_SIZE_LARGE_TOOLBAR)
+        if not type:
+            type = "unknown"
+        status = "File: %(fn)s, type: %(ty)s" \
+                 % {
+                     'fn': filename,
+                     'ty': type}
+        if not encoding:
+            encoding = "unspecified"
+        status = "%(st)s, encoding: %(enc)s" \
+                 % {'st': status,
+                    'enc': encoding}
+        if 'centered' in self.settings:
+            if self.settings['centered']:
+                self.image.set_alignment(0.5, 0.5)
             else:
-                    self.image.set_from_stock(
-                        gtk.STOCK_MISSING_IMAGE,
-                        gtk.ICON_SIZE_LARGE_TOOLBAR)
+                self.image.set_alignment(0, 0)
         else:
-            status = "File: %(fn)s, type: %(ty)s" \
-                     % {'fn': filename,
-                        'ty': 'unknown'}
+            self.image.set_alignment(0.5, 0.5)
+        pixbuf = read_image(filename)
+        if pixbuf:
+            self.image.set_from_pixbuf(pixbuf)
+        else:
             self.image.set_from_stock(
                 gtk.STOCK_MISSING_IMAGE,
                 gtk.ICON_SIZE_LARGE_TOOLBAR)
@@ -434,7 +449,7 @@ class HWindow(gtk.Window):
                 self.display_image(self.current)
         s_window.destroy()
 
-    def create_ui(self, startupobj = ""):
+    def create_ui(self, startupobj=""):
         menu_bar = gtk.MenuBar()
         menu_item = gtk.MenuItem("_hv")
         menu = gtk.Menu()
