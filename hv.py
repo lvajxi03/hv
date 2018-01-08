@@ -26,7 +26,7 @@ except ImportError:
     pass
 
 
-def read_image(filename):
+def read_generic_image(filename):
     try:
         fh = open(filename, "rb")
         data = fh.read()
@@ -34,7 +34,6 @@ def read_image(filename):
         loader = gtk.gdk.PixbufLoader()
         if loader.write(data):
             pixbuf = loader.get_pixbuf()
-            print pixbuf
             loader.close()
             return pixbuf
     except IOError:
@@ -42,6 +41,20 @@ def read_image(filename):
     except glib.GError:
         pass
     return None
+
+
+image_loaders = {
+    'generic_image': read_generic_image}
+
+
+def read_image(filename):
+    suf = os.path.splitext(
+        os.path.basename(
+            filename))[0].lower()
+    if suf in image_loaders:
+        return image_loaders[suf](filename)
+    else:
+        return read_generic_image(filename)
 
 
 def get_drives():
