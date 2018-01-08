@@ -8,6 +8,7 @@ import sys
 import fnmatch
 import ConfigParser
 
+
 have_windows = False
 DEFAULT_MASKS = "*.jpg|*.jpeg|*.png|*.gif|*.bmp|" + \
                 "*.pcx|*.svg|*ico.|*.tiff|*.tif|*.ppm|*.pnm"
@@ -299,6 +300,8 @@ class HWindow(gtk.Window):
             self.masks = self.settings['filemasks'].split("|")
 
     def read_dir(self, dirname="."):
+        if not dirname:
+            dirname = "."
         self.filemodel.clear()
         self.dirmodel.clear()
 
@@ -396,7 +399,7 @@ class HWindow(gtk.Window):
                 self.display_image(self.current)
         s_window.destroy()
 
-    def create_ui(self, startupobj = ""):
+    def create_ui(self, startupobj=""):
         menu_bar = gtk.MenuBar()
         menu_item = gtk.MenuItem("_hv")
         menu = gtk.Menu()
