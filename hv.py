@@ -7,10 +7,11 @@ import os
 import sys
 import fnmatch
 import ConfigParser
+import zipfile
 
 have_windows = False
 DEFAULT_MASKS = "*.jpg|*.jpeg|*.png|*.gif|*.bmp|" + \
-                "*.pcx|*.svg|*ico.|*.tiff|*.tif|*.ppm|*.pnm"
+                "*.pcx|*.svg|*ico.|*.tiff|*.tif|*.ppm|*.pnm|*.idraw"
 BACKGROUND_NONE = 0
 BACKGROUND_WHITE = 1
 BACKGROUND_BLACK = 2
@@ -23,6 +24,25 @@ try:
     have_windows = True
 except ImportError:
     pass
+
+
+def read_idraw_file(filename):
+    try:
+        zf = zipfile.ZipFile(filename)
+        tn = os.path.join("Thumbnails", "Preview.jpg")
+        data = zf.read(tn)
+        loader = gtk.gdk.PixbufLoader()
+        if loader.write(data):
+            pixbuf = loader.get_pixbuf()
+            loader.close()
+            return pixbuf
+    except KeyError:
+        pass
+    except zipfile.BadZipfile:
+        pass
+    except IOError:
+        pass
+    return None
 
 
 def get_drives():
