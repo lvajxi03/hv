@@ -116,29 +116,31 @@ def get_drives():
 def getfiles(curdir=".", masks=[]):
     try:
         os.chdir(curdir)
+        all = [f for f in os.listdir(curdir) if os.path.isfile(f)]
+        all.sort()
+        if len(masks) > 0:
+            files = []
+            for f in all:
+                for mask in masks:
+                    if fnmatch.fnmatch(f, mask):
+                        files.append(f)
+            return files
+        else:
+            return all
     except OSError:
         pass
-    all = [f for f in os.listdir(curdir) if os.path.isfile(f)]
-    all.sort()
-    if len(masks) > 0:
-        files = []
-        for f in all:
-            for mask in masks:
-                if fnmatch.fnmatch(f, mask):
-                    files.append(f)
-        return files
-    else:
-        return all
+    return []
 
 
 def getdirs(curdir="."):
     try:
         os.chdir(curdir)
+        dirs = [f for f in os.listdir(curdir) if os.path.isdir(f)]
+        dirs.sort()
+        return dirs
     except OSError:
         pass
-    dirs = [f for f in os.listdir(curdir) if os.path.isdir(f)]
-    dirs.sort()
-    return dirs
+    return []
 
 
 def saveconfig(configuration={}):
@@ -340,7 +342,7 @@ class HWindow(gtk.Window):
         configuration['settings'] = self.settings
         return configuration
 
-    def set_configuration(self, configuration={}):
+    def set_configuration(self, configuration={}, chdir=False):
         try:
             x = int(configuration['window']['x'])
             y = int(configuration['window']['y'])
@@ -355,7 +357,8 @@ class HWindow(gtk.Window):
             pass
         try:
             ld = configuration['browser']['lastdir']
-            os.chdir(ld)
+            if chdir and ld:
+                os.chdir(ld)
         except KeyError:
             pass
         except IOError:
@@ -378,6 +381,7 @@ class HWindow(gtk.Window):
     def read_dir(self, dirname="."):
         if not dirname:
             dirname = "."
+        os.chdir(dirname)
         self.filemodel.clear()
         self.dirmodel.clear()
 
@@ -411,8 +415,7 @@ class HWindow(gtk.Window):
         (model, iter) = sel.get_selected()
         # Dirname is under model[iter][0]
         newdir = os.path.join(os.getcwd(), model[iter][0])
-        os.chdir(newdir)
-        self.read_dir()
+        self.read_dir(newdir)
         self.update_title()
 
     def file_activated(self, treeview, path, column, user_data=None):
@@ -541,8 +544,8 @@ class HWindow(gtk.Window):
         self.add(vbox)
         self.resize(800, 600)
 
-        self.set_configuration(readconfig())
         if startupobj:
+            self.set_configuration(readconfig(), False)
             if os.path.isfile(startupobj):
                 dname = os.path.dirname(startupobj)
                 self.read_dir(dname)
@@ -552,6 +555,7 @@ class HWindow(gtk.Window):
             else:
                 self.read_dir()
         else:
+            self.set_configuration(readconfig(), True)
             self.read_dir()
         self.update_title()
         self.show_all()
