@@ -467,9 +467,13 @@ class HWindow(gtk.Window):
         response = s_window.run()
         if response == gtk.RESPONSE_ACCEPT:
             self.settings = s_window.get_config()
-            if 'masks' in self.settings:
-                if self.settings['masks']:
-                    self.masks = self.settings['masks'].split("|")
+            self.masks = []
+            if 'filemasks' in self.settings:
+                if self.settings['filemasks']:
+                    for mask in self.settings['filemasks'].split("|"):
+                        if mask:
+                            self.masks.append(mask)
+            self.read_dir()
             if self.current:
                 self.display_image(self.current)
         s_window.destroy()
