@@ -9,13 +9,126 @@ import fnmatch
 import ConfigParser
 import glib
 import zipfile
+
+try:
+    import numpy
+    import PIL.Image
+except ImportError:
+    pass
+
 try:
     import rsvg
 except ImportError:
     pass
 
+checkers = [
+    "100 100 2 1",
+    " 	c #FFFFFF",
+    ".	c #DEDEDE",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "                                                  ..................................................",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  ",
+    "..................................................                                                  "]
+
+
 have_windows = False
-DEFAULT_MASKS = "*.jpg|*.jpeg|*.png|*.gif|*.bmp|" + \
+DEFAULT_MASKS = "*.jpg|*.jpeg|*.png|*.gif|*.bmp|*.tga|" + \
                 "*.pcx|*.svg|*ico.|*.tiff|*.tif|*.ppm|*.pnm|*.idraw"
 BACKGROUND_NONE = 0
 BACKGROUND_WHITE = 1
@@ -29,6 +142,18 @@ try:
     have_windows = True
 except ImportError:
     pass
+
+
+def get_max_rect(w1, h1, w2, h2):
+    w = w1 if w1 > w2 else w2
+    h = h1 if h1 > h2 else h2
+    return (w, h)
+
+
+def get_location(ww, wh, pw, ph):
+    x = int((ww - pw)/2)
+    y = int((wh - ph)/2)
+    return (x, y)
 
 
 def read_generic_image(filename):
@@ -48,7 +173,46 @@ def read_generic_image(filename):
     return None
 
 
-def read_idraw_file(filename):
+def read_pillow_file(filename):
+    try:
+        im = PIL.Image.open(filename)
+        data = numpy.array(im)
+        w, h = im.size
+        pix = gtk.gdk.pixbuf_new_from_array(
+            data,
+            gtk.gdk.COLORSPACE_RGB,
+            8)
+        return pix
+    except NameError:
+        pass
+    return None
+
+
+def read_idraw_pillow(filename):
+    try:
+        zf = zipfile.ZipFile(filename)
+        tn = "Thumbnails/Preview.jpg"
+        fh = zf.open(tn)
+        im = PIL.Image.open(fh)
+        data = numpy.array(im)
+        pix = gtk.gdk.pixbuf_new_from_array(
+            data,
+            gtk.gdk.COLORSPACE_RGB,
+            8)
+        fh.close()
+        return pix
+    except NameError:
+        pass
+    except KeyError:
+        pass
+    except zipfile.BadZipfile:
+        pass
+    except IOError:
+        pass
+    return None
+
+
+def read_idraw_pixbuf(filename):
     try:
         zf = zipfile.ZipFile(filename)
         tn = "Thumbnails/Preview.jpg"
@@ -57,14 +221,29 @@ def read_idraw_file(filename):
         if loader.write(data):
             pixbuf = loader.get_pixbuf()
             loader.close()
+            if not pixbuf:
+                data = numpy.array(data)
+                pixbuf = gtk.gdk.pixbuf_new_from_array(
+                    data,
+                    gtk.gdk.COLORSPACE_RGB,
+                    8)
             return pixbuf
     except KeyError:
         pass
     except zipfile.BadZipfile:
         pass
+    except TypeError:
+        pass
     except IOError:
         pass
     return None
+
+
+def read_idraw_file(filename):
+    pixbuf = read_idraw_pixbuf(filename)
+    if not pixbuf:
+        pixbuf = read_idraw_pillow(filename)
+    return pixbuf
 
 
 def read_svg_file(filename):
@@ -86,7 +265,10 @@ def read_svg_file(filename):
 image_loaders = {
     'generic_image': read_generic_image,
     '.idraw': read_idraw_file,
-    '.svg': read_svg_file}
+    '.svg': read_svg_file,
+    '.jpg': read_pillow_file,
+    '.bmp': read_pillow_file,
+    '.jpeg': read_pillow_file}
 
 
 def read_image(filename):
@@ -363,7 +545,7 @@ class HWindow(gtk.Window):
             pass
         except IOError:
             pass
-        except WindowsError:
+        except OSError:
             pass
         try:
             w = int(configuration['browser']['w'])
@@ -396,7 +578,13 @@ class HWindow(gtk.Window):
 
         for drive in get_drives():
             self.dirmodel.append(["%(letter)s:\\" % {'letter': drive}])
-        self.current = ""
+        if self.current:
+            cname = os.getcwd()
+            dname = os. path.dirname(self.current)
+            if not dname:
+                dname = os.getcwd()
+            if dname != cname:
+                self.current = ""
 
     def __init__(self, startupobj=""):
         self.settings = {}
@@ -425,6 +613,11 @@ class HWindow(gtk.Window):
             print "Activated", model[iter][0]
 
     def display_image(self, filename):
+        if 'background' in self.settings:
+            background = int(self.settings['background'])
+        else:
+            background = BACKGROUND_NONE
+
         (type, encoding) = mimetypes.guess_type(filename)
         if not type:
             type = "unknown"
@@ -446,7 +639,46 @@ class HWindow(gtk.Window):
             self.image.set_alignment(0.5, 0.5)
         pixbuf = read_image(filename)
         if pixbuf:
-            self.image.set_from_pixbuf(pixbuf)
+            r = self.sv3.get_allocation()
+            pw = pixbuf.get_width()
+            ph = pixbuf.get_height()
+            (w, h) = get_max_rect(
+                r.width,
+                r.height,
+                pw,
+                ph)
+            pb = gtk.gdk.Pixbuf(
+                gtk.gdk.COLORSPACE_RGB,
+                True,
+                8,
+                w,
+                h)
+            self.image.clear()
+            if background == BACKGROUND_WHITE:
+                pb.fill(0xffffffff)
+            elif background == BACKGROUND_BLACK:
+                pb.fill(0x000000ff)
+            elif background == BACKGROUND_CHECKERED:
+                chk = gtk.gdk.pixbuf_new_from_xpm_data(checkers)
+                tx = w / 100
+                ty = h / 100
+                if w % 100 > 0:
+                    tx = tx + 1
+                if h % 100 > 0:
+                    ty = ty + 1
+
+                for i in range(0, tx):
+                    for j in range(0, ty):
+                        wl = w - 100 * i
+                        hl = h - 100 * j
+                        wl = 100 if wl > 100 else wl
+                        hl = 100 if hl > 100 else hl
+                        chk.copy_area(0, 0, wl, hl, pb, i * 100, j * 100)
+
+            (x, y) = get_location(w, h, pw, ph)
+            pixbuf.copy_area(0, 0, pw, ph, pb, x, y)
+
+            self.image.set_from_pixbuf(pb)
         else:
             self.image.set_from_stock(
                 gtk.STOCK_MISSING_IMAGE,
@@ -460,6 +692,7 @@ class HWindow(gtk.Window):
             filename = model[iter][0]
             fulln = os.path.join(os.getcwd(), filename)
             self.display_image(fulln)
+            self.current = fulln
 
     def show_settings(self, data=None):
         s_window = HSettings()
@@ -535,10 +768,10 @@ class HWindow(gtk.Window):
         vpaned.add2(sv2)
 
         hpaned.add1(vpaned)
-        sv3 = gtk.ScrolledWindow()
-        sv3.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        sv3.add_with_viewport(self.image)
-        hpaned.add2(sv3)
+        self.sv3 = gtk.ScrolledWindow()
+        self.sv3.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.sv3.add_with_viewport(self.image)
+        hpaned.add2(self.sv3)
 
         vbox = gtk.VBox(False, 2)
         vbox.pack_start(menu_bar, False, False, 0)
