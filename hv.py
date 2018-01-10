@@ -173,6 +173,16 @@ def read_generic_image(filename):
     return None
 
 
+def read_xpm_pixbuf(filename):
+    try:
+        return gtk.gdk.pixbuf_new_from_file(filename)
+    except IOError:
+        pass
+    except glib.GError:
+        pass
+    return None
+
+
 def read_pillow_file(filename):
     try:
         im = PIL.Image.open(filename)
@@ -294,7 +304,7 @@ image_loaders = {
     '.svg': read_svg_file,
     '.jpg': read_jpeg_file,
     '.bmp': read_pillow_file,
-    '.xpm': read_pillow_file,
+    '.xpm': read_xpm_pixbuf,
     '.jpeg': read_jpeg_file}
 
 
