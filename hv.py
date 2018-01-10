@@ -667,13 +667,21 @@ class HWindow(gtk.Window):
         status = "%(st)s, encoding: %(enc)s" \
                  % {'st': status,
                     'enc': encoding}
+
+        centered = False
         if 'centered' in self.settings:
             if self.settings['centered']:
-                self.image.set_alignment(0.5, 0.5)
+                centered = True
             else:
-                self.image.set_alignment(0, 0)
+                centered = False
         else:
+            centered = True
+
+        if centered:
             self.image.set_alignment(0.5, 0.5)
+        else:
+            self.image.set_alignment(0, 0)
+
         pixbuf = read_image(filename)
         if pixbuf:
             r = self.sv3.get_allocation()
@@ -712,7 +720,11 @@ class HWindow(gtk.Window):
                         hl = 100 if hl > 100 else hl
                         chk.copy_area(0, 0, wl, hl, pb, i * 100, j * 100)
 
-            (x, y) = get_location(w, h, pw, ph)
+            if centered:
+                (x, y) = get_location(w, h, pw, ph)
+            else:
+                x = 0
+                y = 0
             pixbuf.copy_area(0, 0, pw, ph, pb, x, y)
 
             self.image.set_from_pixbuf(pb)
