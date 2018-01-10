@@ -185,6 +185,8 @@ def read_pillow_file(filename):
         return pix
     except NameError:
         pass
+    except IOError:
+        pass
     return None
 
 
@@ -210,6 +212,30 @@ def read_idraw_pillow(filename):
     except IOError:
         pass
     return None
+
+
+def read_jpeg_pixbuf(filename):
+    fh = open(filename, "rb")
+    data = fh.read()
+    fh.close()
+    try:
+        loader = gtk.gdk.PixbufLoader()
+        if loader.write(data):
+            pixbuf = loader.get_pixbuf()
+            loader.close()
+            return pixbuf
+    except glib.GError:
+        pass
+    except IOError:
+        pass
+    return None
+
+
+def read_jpeg_file(filename):
+    pixbuf = read_jpeg_pixbuf(filename)
+    if not pixbuf:
+        pixbuf = read_pillow_file(filename)
+    return pixbuf
 
 
 def read_idraw_pixbuf(filename):
@@ -266,9 +292,10 @@ image_loaders = {
     'generic_image': read_generic_image,
     '.idraw': read_idraw_file,
     '.svg': read_svg_file,
-    '.jpg': read_pillow_file,
+    '.jpg': read_jpeg_file,
     '.bmp': read_pillow_file,
-    '.jpeg': read_pillow_file}
+    '.xpm': read_pillow_file,
+    '.jpeg': read_jpeg_file}
 
 
 def read_image(filename):
