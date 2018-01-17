@@ -726,7 +726,6 @@ class HWindow(gtk.Window):
                 x = 0
                 y = 0
             pixbuf.copy_area(0, 0, pw, ph, pb, x, y)
-
             self.image.set_from_pixbuf(pb)
         else:
             self.image.set_from_stock(
@@ -734,6 +733,20 @@ class HWindow(gtk.Window):
                 gtk.ICON_SIZE_LARGE_TOOLBAR)
         self.statusbar.push(0, status)
         self.current = filename
+
+    def popup_image(self, widget, event, unused):
+        if unused.get_visible():
+            unused.hide()
+        else:
+            if event.type == gtk.gdk.BUTTON_PRESS:
+                if event.button == 3:
+                    unused.show_all()
+                    unused.popup(
+                        None,
+                        None,
+                        None,
+                        event.button,
+                        event.time)
 
     def file_changed(self, selection):
         (model, iter) = selection.get_selected()
@@ -760,7 +773,39 @@ class HWindow(gtk.Window):
                 self.display_image(self.current)
         s_window.destroy()
 
+    def click_flip_horiz(self, data=None):
+        pass
+
+    def click_flip_vert(self, data=None):
+        pass
+
+    def click_rotate_cl(self, data=None):
+        pass
+
+    def click_rotate_cc(self, data=None):
+        pass
+
     def create_ui(self, startupobj=""):
+
+        self.imagemenu = gtk.Menu()
+        menu_item = gtk.MenuItem("Flip _horizontally")
+        menu_item.connect('activate', self.click_flip_horiz)
+        self.imagemenu.append(menu_item)
+        menu_item = gtk.MenuItem("Flip _vertically")
+        menu_item.connect('activate', self.click_flip_vert)
+        self.imagemenu.append(menu_item)
+        menu_item = gtk.MenuItem("Rotate _clockwise")
+        menu_item.connect('activate', self.click_rotate_cl)
+        self.imagemenu.append(menu_item)
+        menu_item = gtk.MenuItem("Rotate c_ounter-clockwise")
+        menu_item.connect('activate', self.click_rotate_cc)
+        self.imagemenu.append(menu_item)
+        self.imagemenu.append(gtk.SeparatorMenuItem())
+        menu_item = gtk.MenuItem("Open _with...")
+        submenu = gtk.Menu()
+        menu_item.set_submenu(submenu)
+        self.imagemenu.append(menu_item)
+
         menu_bar = gtk.MenuBar()
         menu_item = gtk.MenuItem("_hv")
         menu = gtk.Menu()
@@ -819,8 +864,15 @@ class HWindow(gtk.Window):
         hpaned.add1(vpaned)
         self.sv3 = gtk.ScrolledWindow()
         self.sv3.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        self.sv3.add_with_viewport(self.image)
+        self.evb = gtk.EventBox()
+        self.evb.add(self.image)
+        self.sv3.add_with_viewport(self.evb)
         hpaned.add2(self.sv3)
+
+        self.evb.connect(
+            'button-press-event',
+            self.popup_image,
+            self.imagemenu)
 
         vbox = gtk.VBox(False, 2)
         vbox.pack_start(menu_bar, False, False, 0)
