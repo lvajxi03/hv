@@ -399,6 +399,42 @@ def readconfig():
     return configuration
 
 
+class HImage(gtk.Image):
+    def __init__(self):
+        gtk.Image.__init__(self)
+        self.picture = None
+        self.origin = None
+
+    def set_picture(self, picture):
+        self.origin = picture
+        self.picture = picture
+        self.display()
+
+    def get_picture(self):
+        return self.picture
+
+    def get_origin(self):
+        return self.origin
+
+    def display(self):
+        self.set_from_pixbuf(self.picture)
+
+    def rotate_left(self):
+        pass
+
+    def rotate_right(self):
+        pass
+
+    def reload(self):
+        pass
+
+    def flip_horiz(self):
+        pass
+
+    def flip_vert(self):
+        pass
+
+
 class HSettings(gtk.Dialog):
 
     def __init__(self):
@@ -726,7 +762,7 @@ class HWindow(gtk.Window):
                 x = 0
                 y = 0
             pixbuf.copy_area(0, 0, pw, ph, pb, x, y)
-            self.image.set_from_pixbuf(pb)
+            self.image.set_picture(pb)
         else:
             self.image.set_from_stock(
                 gtk.STOCK_MISSING_IMAGE,
@@ -853,7 +889,7 @@ class HWindow(gtk.Window):
         self.statusbar = gtk.Statusbar()
         self.statusbar.push(0, "/hv/")
 
-        self.image = gtk.Image()
+        self.image = HImage()
 
         hpaned = gtk.HPaned()
         vpaned = gtk.VPaned()
