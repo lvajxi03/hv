@@ -109,6 +109,33 @@ def readconfig():
     return configuration
 
 
+class HvImage(wx.Panel):
+    def __init__(self, parent):
+        wx.Panel.__init__(
+            self,
+            parent,
+            style=wx.SUNKEN_BORDER)
+        self.Bind(wx.EVT_PAINT, self.OnPaintEvent)
+        self.image = None
+
+    def loadImage(self, filename):
+        self.image = wx.Image()
+        self.image.LoadFile(filename)
+        self.paint()
+
+    def render(self, dc):
+        if self.image:
+            dc.DrawBitmap(wx.BitmapFromImage(self.image), 0, 0, False)
+
+    def paint(self):
+        dc = wx.ClientDC(self)
+        self.render(dc)
+
+    def OnPaintEvent(self, event):
+        dc = wx.PaintDC(self)
+        self.render(dc)
+
+
 class HvPreferences(wx.Dialog):
     def __init__(self, parent):
         wx.Dialog.__init__(
@@ -261,7 +288,7 @@ class HvFrame(wx.Frame):
         self.fileList.InsertColumn(2, 'Date')
         self.fileList.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelectFileList)
         self.splitterH.SplitHorizontally(self.dirList, self.fileList, 250)
-        self.imagePanel = wx.Panel(self.splitterV)
+        self.imagePanel = HvImage(self.splitterV)
         self.splitterV.SplitVertically(self.splitterH, self.imagePanel, 250)
         self.CreateStatusBar()
         self.SetStatusText("/hv/")
@@ -269,6 +296,7 @@ class HvFrame(wx.Frame):
     def OnSelectFileList(self, event):
         item = event.GetItem()
         text = item.GetText()
+        self.imagePanel.loadImage(text)
 
     def OnDblClickDirList(self, event):
         dname = event.GetItem().GetText()
