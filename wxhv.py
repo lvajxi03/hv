@@ -16,6 +16,25 @@ except ImportError:
     pass
 
 
+BACKGROUND_NONE = 0
+BACKGROUND_WHITE = 1
+BACKGROUND_BLACK = 2
+BACKGROUND_CHECKERED = 3
+BACKGROUND_CUSTOM = 4
+
+
+def get_max_rect(w1, h1, w2, h2):
+    w = w1 if w1 > w2 else w2
+    h = h1 if h1 > h2 else h2
+    return (w, h)
+
+
+def get_location(ww, wh, pw, ph):
+    x = int((ww - pw)/2)
+    y = int((wh - ph)/2)
+    return (x, y)
+
+
 def get_drives():
     drives = []
     if have_windows:
@@ -117,6 +136,10 @@ class HvImage(wx.Panel):
             style=wx.SUNKEN_BORDER)
         self.Bind(wx.EVT_PAINT, self.OnPaintEvent)
         self.image = None
+        self.background = BACKGROUND_WHITE
+        self.centered = True
+        self.shrink = False
+        self.zoom = False
 
     def loadImage(self, filename):
         self.image = wx.Image()
@@ -125,14 +148,37 @@ class HvImage(wx.Panel):
 
     def render(self, dc):
         if self.image:
-            dc.DrawBitmap(wx.BitmapFromImage(self.image), 0, 0, False)
+            imageSize = self.image.GetSize()
+            panelSize = self.GetSize()
+            if self.background == BACKGROUND_NONE:
+                dc.Clear()
+            elif self.background == BACKGROUND_WHITE:
+                dc.Clear()
+                dc.FloodFill(0, 0, wx.Colour(127, 127, 127))
+            elif self.background == BACKGROUND_BLACK:
+                dc.Clear()
+                dc.FloodFill(0, 0, wx.Colour(0, 0, 0))
+            elif self.background == BACKGROUND_CHECKERED:
+                pass
+
+            if self.centered:
+                (x, y) = get_location(
+                    panelSize.width,
+                    panelSize.height,
+                    imageSize.width,
+                    imageSize.height)
+            else:
+                x = 0
+                y = 0
+
+            dc.DrawBitmap(wx.BitmapFromImage(self.image), x, y, False)
 
     def paint(self):
         dc = wx.ClientDC(self)
         self.render(dc)
 
     def OnPaintEvent(self, event):
-        dc = wx.PaintDC(self)
+        dc = wx.ClientDC(self)
         self.render(dc)
 
 
