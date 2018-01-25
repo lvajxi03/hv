@@ -2,235 +2,7 @@
 
 import wx
 import os
-import fnmatch
-import ConfigParser
-import datetime
-
-have_windows = False
-
-try:
-    import string
-    from ctypes import windll
-    have_windows = True
-except ImportError:
-    pass
-
-
-BACKGROUND_NONE = 0
-BACKGROUND_WHITE = 1
-BACKGROUND_BLACK = 2
-BACKGROUND_CHECKERED = 3
-BACKGROUND_CUSTOM = 4
-
-checkers = [
-    "100 100 2 1",
-    " 	c #FFFFFF",
-    ".	c #DEDEDE",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  "]
-
-
-def get_max_rect(w1, h1, w2, h2):
-    w = w1 if w1 > w2 else w2
-    h = h1 if h1 > h2 else h2
-    return (w, h)
-
-
-def get_location(ww, wh, pw, ph):
-    x = int((ww - pw)/2)
-    y = int((wh - ph)/2)
-    return (x, y)
-
-
-def get_drives():
-    drives = []
-    if have_windows:
-        bitmask = windll.kernel32.GetLogicalDrives()
-        for letter in string.uppercase:
-            if bitmask & 1:
-                drives.append(letter)
-            bitmask >>= 1
-    return drives
-
-
-def getfiles(curdir=".", masks=[]):
-    try:
-        names = []
-        os.chdir(curdir)
-        if len(masks) > 0:
-            for f in os.listdir(curdir):
-                if os.path.isfile(f):
-                    for mask in masks:
-                        if fnmatch.fnmatch(f, mask):
-                            names.append(f)
-        else:
-            for f in os.listdir(curdir):
-                if os.path.isfile(f):
-                    names.append(f)
-        names.sort()
-
-        full = []
-        for name in names:
-            mtime = os.path.getmtime(name)
-            ts = datetime.datetime.fromtimestamp(
-                mtime).strftime('%Y-%m-%d %H:%M:%S')
-            statinfo = os.stat(name)
-            size = statinfo.st_size
-            full.append([name, ts, size])
-
-        return full
-    except OSError:
-        pass
-    return []
-
-
-def getdirs(curdir="."):
-    try:
-        os.chdir(curdir)
-        dirs = []
-        for f in os.listdir(curdir):
-            if os.path.isdir(f):
-                dirs.append(f)
-        dirs.sort()
-        return dirs
-    except OSError:
-        pass
-    return []
-
-
-def saveconfig(configuration={}):
-    fh = open(os.path.join(os.path.expanduser("~"), ".hvrc"), "w")
-    cp = ConfigParser.ConfigParser()
-    for key in configuration:
-        cp.add_section(key)
-        for subkey in configuration[key]:
-            cp.set(key, subkey, configuration[key][subkey])
-    cp.write(fh)
-    fh.close()
-
-
-def readconfig():
-    configuration = {}
-    try:
-        fh = open(os.path.join(os.path.expanduser("~"), ".hvrc"))
-        cp = ConfigParser.ConfigParser()
-        cp.readfp(fh)
-        for section in cp.sections():
-            configuration[section] = {}
-            for tuple in cp.items(section):
-                configuration[section][tuple[0]] = tuple[1]
-        fh.close()
-    except IOError:
-        pass
-    # Saturday night specials:
-    if 'settings' in configuration:
-        for key in ['centered', 'aspect', 'maximize', 'shrink']:
-            try:
-                if configuration['settings'][key] == 'True':
-                    configuration['settings'][key] = True
-                else:
-                    configuration['settings'][key] = False
-            except KeyError:
-                configuration['settings'][key] = False
-    return configuration
+import hvcommon
 
 
 class HvImage(wx.Panel):
@@ -241,7 +13,7 @@ class HvImage(wx.Panel):
             style=wx.SUNKEN_BORDER)
         self.Bind(wx.EVT_PAINT, self.OnPaintEvent)
         self.image = None
-        self.background = BACKGROUND_CHECKERED
+        self.background = hvcommon.BACKGROUND_CHECKERED
         self.centered = True
         self.shrink = False
         self.zoom = False
@@ -258,16 +30,17 @@ class HvImage(wx.Panel):
         if self.image:
             imageSize = self.image.GetSize()
             panelSize = self.GetSize()
-            if self.background == BACKGROUND_NONE:
+            if self.background == hvcommon.BACKGROUND_NONE:
                 dc.Clear()
-            elif self.background == BACKGROUND_WHITE:
+            elif self.background == hvcommon.BACKGROUND_WHITE:
                 dc.Clear()
                 dc.FloodFill(0, 0, wx.Colour(255, 255, 255), wx.FLOOD_SURFACE)
-            elif self.background == BACKGROUND_BLACK:
+            elif self.background == hvcommon.BACKGROUND_BLACK:
                 dc.Clear()
                 dc.FloodFill(1, 1, wx.Colour(0, 0, 0), wx.FLOOD_SURFACE)
-            elif self.background == BACKGROUND_CHECKERED:
-                # chkbmp = wx.BitmapFromXPMData(checkers)
+            elif self.background == hvcommon.BACKGROUND_CHECKERED:
+                dc.Clear()  # Temporary, until better solution found
+                # chkbmp = wx.BitmapFromXPMData(hvcommon.checkers)
                 # tx = panelSize.width / 100
                 # ty = panelSize.height / 100
                 # if panelSize.width % 100 > 0:
@@ -283,7 +56,7 @@ class HvImage(wx.Panel):
                 #             False)
                 pass
             if self.centered:
-                (x, y) = get_location(
+                (x, y) = hvcommon.get_location(
                     panelSize.width,
                     panelSize.height,
                     imageSize.width,
@@ -291,7 +64,7 @@ class HvImage(wx.Panel):
             else:
                 x = 0
                 y = 0
-            dc.DrawBitmap(wx.BitmapFromImage(self.image), x, y, False)
+            dc.DrawBitmap(wx.Bitmap(self.image), x, y, False)
         else:
             dc.Clear()
 
@@ -489,7 +262,7 @@ class HvFrame(wx.Frame):
         self.dirList.DeleteAllItems()
 
         itemNo = 0
-        for f in getfiles(".", self.masks):
+        for f in hvcommon.getfiles(".", self.masks):
             self.fileList.InsertStringItem(itemNo, f[0])
             self.fileList.SetItem(itemNo, 1, "%(x)d" % {'x': f[2]})
             self.fileList.SetItem(itemNo, 2, f[1])
@@ -498,11 +271,11 @@ class HvFrame(wx.Frame):
         self.dirList.InsertStringItem(0, '.')
         self.dirList.InsertStringItem(0, '..')
         itemNo = 2
-        for d in getdirs():
+        for d in hvcommon.getdirs():
             self.dirList.InsertStringItem(itemNo, d)
             itemNo += 1
 
-        for drive in get_drives():
+        for drive in hvcommon.get_drives():
             self.dirList.InsertStringItem(
                 itemNo,
                 "%(letter)s:\\"

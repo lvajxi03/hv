@@ -5,10 +5,9 @@ import gobject
 import mimetypes
 import os
 import sys
-import fnmatch
-import ConfigParser
 import glib
 import zipfile
+import hvcommon
 
 try:
     import numpy
@@ -20,140 +19,6 @@ try:
     import rsvg
 except ImportError:
     pass
-
-checkers = [
-    "100 100 2 1",
-    " 	c #FFFFFF",
-    ".	c #DEDEDE",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "                                                  ..................................................",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  ",
-    "..................................................                                                  "]
-
-
-have_windows = False
-DEFAULT_MASKS = "*.jpg|*.jpeg|*.png|*.gif|*.bmp|*.tga|" + \
-                "*.pcx|*.svg|*ico.|*.tiff|*.tif|*.ppm|*.pnm|*.idraw"
-BACKGROUND_NONE = 0
-BACKGROUND_WHITE = 1
-BACKGROUND_BLACK = 2
-BACKGROUND_CHECKERED = 3
-BACKGROUND_CUSTOM = 4
-
-try:
-    import string
-    from ctypes import windll
-    have_windows = True
-except ImportError:
-    pass
-
-
-def get_max_rect(w1, h1, w2, h2):
-    w = w1 if w1 > w2 else w2
-    h = h1 if h1 > h2 else h2
-    return (w, h)
-
-
-def get_location(ww, wh, pw, ph):
-    x = int((ww - pw)/2)
-    y = int((wh - ph)/2)
-    return (x, y)
 
 
 def read_generic_image(filename):
@@ -321,84 +186,6 @@ def read_image(filename):
         return read_generic_image(filename)
 
 
-def get_drives():
-    drives = []
-    if have_windows:
-        bitmask = windll.kernel32.GetLogicalDrives()
-        for letter in string.uppercase:
-            if bitmask & 1:
-                drives.append(letter)
-            bitmask >>= 1
-    return drives
-
-
-def getfiles(curdir=".", masks=[]):
-    try:
-        os.chdir(curdir)
-        all = [f for f in os.listdir(curdir) if os.path.isfile(f)]
-        all.sort()
-        if len(masks) > 0:
-            files = []
-            for f in all:
-                for mask in masks:
-                    if fnmatch.fnmatch(f, mask):
-                        files.append(f)
-            return files
-        else:
-            return all
-    except OSError:
-        pass
-    return []
-
-
-def getdirs(curdir="."):
-    try:
-        os.chdir(curdir)
-        dirs = [f for f in os.listdir(curdir) if os.path.isdir(f)]
-        dirs.sort()
-        return dirs
-    except OSError:
-        pass
-    return []
-
-
-def saveconfig(configuration={}):
-    fh = open(os.path.join(os.path.expanduser("~"), ".hvrc"), "w")
-    cp = ConfigParser.ConfigParser()
-    for key in configuration:
-        cp.add_section(key)
-        for subkey in configuration[key]:
-            cp.set(key, subkey, configuration[key][subkey])
-    cp.write(fh)
-    fh.close()
-
-
-def readconfig():
-    configuration = {}
-    try:
-        fh = open(os.path.join(os.path.expanduser("~"), ".hvrc"))
-        cp = ConfigParser.ConfigParser()
-        cp.readfp(fh)
-        for section in cp.sections():
-            configuration[section] = {}
-            for tuple in cp.items(section):
-                configuration[section][tuple[0]] = tuple[1]
-        fh.close()
-    except IOError:
-        pass
-    # Saturday night specials:
-    if 'settings' in configuration:
-        for key in ['centered', 'aspect', 'maximize', 'shrink']:
-            try:
-                if configuration['settings'][key] == 'True':
-                    configuration['settings'][key] = True
-                else:
-                    configuration['settings'][key] = False
-            except KeyError:
-                configuration['settings'][key] = False
-    return configuration
-
-
 class HImage(gtk.Image):
     def __init__(self):
         gtk.Image.__init__(self)
@@ -454,7 +241,7 @@ class HSettings(gtk.Dialog):
         self.masks.connect("toggled", self.toggle_filemasks)
         vbox.pack_start(self.masks)
         self.entry = gtk.Entry()
-        self.entry.set_text(DEFAULT_MASKS)
+        self.entry.set_text(hvcommon.DEFAULT_MASKS)
         self.entry.set_sensitive(False)
         vbox.pack_start(self.entry)
         hbox = gtk.HBox()
@@ -518,22 +305,22 @@ class HSettings(gtk.Dialog):
 
     def get_background(self):
         if self.radio1.get_active():
-            return BACKGROUND_NONE
+            return hvcommon.BACKGROUND_NONE
         elif self.radio2.get_active():
-            return BACKGROUND_WHITE
+            return hvcommon.BACKGROUND_WHITE
         elif self.radio3.get_active():
-            return BACKGROUND_BLACK
+            return hvcommon.BACKGROUND_BLACK
         elif self.radio4.get_active():
-            return BACKGROUND_CHECKERED
+            return hvcommon.BACKGROUND_CHECKERED
         else:
-            return BACKGROUND_NONE
+            return hvcommon.BACKGROUND_NONE
 
     def set_background(self, background):
-        if background == BACKGROUND_WHITE:
+        if background == hvcommon.BACKGROUND_WHITE:
             self.radio2.set_active(True)
-        elif background == BACKGROUND_BLACK:
+        elif background == hvcommon.BACKGROUND_BLACK:
             self.radio3.set_active(True)
-        elif background == BACKGROUND_CHECKERED:
+        elif background == hvcommon.BACKGROUND_CHECKERED:
             self.radio4.set_active(True)
         else:
             self.radio1.set_active(True)
@@ -575,7 +362,7 @@ class HSettings(gtk.Dialog):
                 bg = int(config['background'])
                 self.set_background(bg)
             except ValueError:
-                self.set_background(BACKGROUND_NONE)
+                self.set_background(hvcommon.BACKGROUND_NONE)
 
 
 class HWindow(gtk.Window):
@@ -640,16 +427,16 @@ class HWindow(gtk.Window):
         self.filemodel.clear()
         self.dirmodel.clear()
 
-        for f in getfiles(dirname, self.masks):
-            self.filemodel.append([f])
+        for f in hvcommon.getfiles(dirname, self.masks):
+            self.filemodel.append([f[0]])
 
         self.dirmodel.append(["."])
         self.dirmodel.append([".."])
 
-        for d in getdirs(dirname):
+        for d in hvcommon.getdirs(dirname):
             self.dirmodel.append([d])
 
-        for drive in get_drives():
+        for drive in hvcommon.get_drives():
             self.dirmodel.append(["%(letter)s:\\" % {'letter': drive}])
         if self.current:
             cname = os.getcwd()
@@ -668,7 +455,7 @@ class HWindow(gtk.Window):
         self.create_ui(startupobj)
 
     def quit(self, data=None):
-        saveconfig(self.get_configuration())
+        hvcommon.saveconfig(self.get_configuration())
         gtk.main_quit()
 
     def dir_activated(self, treeview, path, column, user_data=None):
@@ -689,7 +476,7 @@ class HWindow(gtk.Window):
         if 'background' in self.settings:
             background = int(self.settings['background'])
         else:
-            background = BACKGROUND_NONE
+            background = hvcommon.BACKGROUND_NONE
 
         (type, encoding) = mimetypes.guess_type(filename)
         if not type:
@@ -723,7 +510,7 @@ class HWindow(gtk.Window):
             r = self.sv3.get_allocation()
             pw = pixbuf.get_width()
             ph = pixbuf.get_height()
-            (w, h) = get_max_rect(
+            (w, h) = hvcommon.get_max_rect(
                 r.width,
                 r.height,
                 pw,
@@ -735,12 +522,12 @@ class HWindow(gtk.Window):
                 w,
                 h)
             self.image.clear()
-            if background == BACKGROUND_WHITE:
+            if background == hvcommon.BACKGROUND_WHITE:
                 pb.fill(0xffffffff)
-            elif background == BACKGROUND_BLACK:
+            elif background == hvcommon.BACKGROUND_BLACK:
                 pb.fill(0x000000ff)
-            elif background == BACKGROUND_CHECKERED:
-                chk = gtk.gdk.pixbuf_new_from_xpm_data(checkers)
+            elif background == hvcommon.BACKGROUND_CHECKERED:
+                chk = gtk.gdk.pixbuf_new_from_xpm_data(hvcommon.checkers)
                 tx = w / 100
                 ty = h / 100
                 if w % 100 > 0:
@@ -757,7 +544,7 @@ class HWindow(gtk.Window):
                         chk.copy_area(0, 0, wl, hl, pb, i * 100, j * 100)
 
             if centered:
-                (x, y) = get_location(w, h, pw, ph)
+                (x, y) = hvcommon.get_location(w, h, pw, ph)
             else:
                 x = 0
                 y = 0
@@ -919,7 +706,7 @@ class HWindow(gtk.Window):
         self.resize(800, 600)
 
         if startupobj:
-            self.set_configuration(readconfig(), False)
+            self.set_configuration(hvcommon.readconfig(), False)
             if os.path.isfile(startupobj):
                 dname = os.path.dirname(startupobj)
                 self.read_dir(dname)
@@ -929,7 +716,7 @@ class HWindow(gtk.Window):
             else:
                 self.read_dir()
         else:
-            self.set_configuration(readconfig(), True)
+            self.set_configuration(hvcommon.readconfig(), True)
             self.read_dir()
         self.update_title()
         self.show_all()
