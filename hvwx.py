@@ -264,7 +264,7 @@ class HvFrame(wx.Frame):
         itemNo = 0
         for f in hvcommon.getfiles(".", self.masks):
             self.fileList.InsertStringItem(itemNo, f[0])
-            self.fileList.SetItem(itemNo, 1, "%(x)d" % {'x': f[2]})
+            self.fileList.SetItem(itemNo, 1, f[2])
             self.fileList.SetItem(itemNo, 2, f[1])
             itemNo += 1
 
