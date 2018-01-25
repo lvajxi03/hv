@@ -428,16 +428,18 @@ class HWindow(gtk.Window):
         self.dirmodel.clear()
 
         for f in hvcommon.getfiles(dirname, self.masks):
-            self.filemodel.append([f[0]])
+            self.filemodel.append([self.file_icon, f[0], f[1], f[2]])
 
-        self.dirmodel.append(["."])
-        self.dirmodel.append([".."])
+        self.dirmodel.append([self.dir_icon, "."])
+        self.dirmodel.append([self.dir_icon, ".."])
 
         for d in hvcommon.getdirs(dirname):
-            self.dirmodel.append([d])
+            self.dirmodel.append([self.dir_icon, d])
 
         for drive in hvcommon.get_drives():
-            self.dirmodel.append(["%(letter)s:\\" % {'letter': drive}])
+            self.dirmodel.append(
+                [self.drive_icon,
+                 "%(letter)s:\\" % {'letter': drive}])
         if self.current:
             cname = os.getcwd()
             dname = os. path.dirname(self.current)
@@ -462,7 +464,7 @@ class HWindow(gtk.Window):
         sel = treeview.get_selection()
         (model, iter) = sel.get_selected()
         # Dirname is under model[iter][0]
-        newdir = os.path.join(os.getcwd(), model[iter][0])
+        newdir = os.path.join(os.getcwd(), model[iter][1])
         self.read_dir(newdir)
         self.update_title()
 
@@ -470,7 +472,8 @@ class HWindow(gtk.Window):
         sel = treeview.get_selection()
         (model, iter) = sel.get_selected()
         if iter is not None:
-            print "Activated", model[iter][0]
+            print("Activated %(it)s"
+                  % {'it': model[iter][1]})
 
     def display_image(self, filename):
         if 'background' in self.settings:
@@ -574,7 +577,7 @@ class HWindow(gtk.Window):
     def file_changed(self, selection):
         (model, iter) = selection.get_selected()
         if iter is not None:
-            filename = model[iter][0]
+            filename = model[iter][1]
             fulln = os.path.join(os.getcwd(), filename)
             self.display_image(fulln)
             self.current = fulln
@@ -640,6 +643,27 @@ class HWindow(gtk.Window):
         menu_subitem.connect('activate', self.quit)
         menu.append(menu_subitem)
         menu_bar.append(menu_item)
+        stock_hi = gtk.Image()
+        self.drive_icon = stock_hi.render_icon(
+            gtk.STOCK_HARDDISK,
+            gtk.ICON_SIZE_MENU)
+
+        stock_di = gtk.Image()
+        self.dir_icon = stock_di.render_icon(
+            gtk.STOCK_DIRECTORY,
+            gtk.ICON_SIZE_MENU)
+        dcolumn = gtk.TreeViewColumn("Directory name")
+        dtext_renderer = gtk.CellRendererText()
+        dicon_renderer = gtk.CellRendererPixbuf()
+        dcolumn.pack_start(dicon_renderer, False)
+        dcolumn.pack_start(dtext_renderer, False)
+        dcolumn.set_attributes(dtext_renderer, text=1)
+        dcolumn.set_attributes(dicon_renderer, pixbuf=0)
+
+        stock_fi = gtk.Image()
+        self.file_icon = stock_di.render_icon(
+            gtk.STOCK_FILE,
+            gtk.ICON_SIZE_MENU)
 
         self.sv1 = gtk.ScrolledWindow()
         self.sv1.set_usize(150, 150)
@@ -648,13 +672,38 @@ class HWindow(gtk.Window):
         sv2 = gtk.ScrolledWindow()
         sv2.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
-        self.dirmodel = gtk.ListStore(gobject.TYPE_STRING)
-        self.filemodel = gtk.ListStore(gobject.TYPE_STRING)
+        self.dirmodel = gtk.ListStore(gtk.gdk.Pixbuf, gobject.TYPE_STRING)
+        self.filemodel = gtk.ListStore(
+            gtk.gdk.Pixbuf,
+            gobject.TYPE_STRING,
+            gobject.TYPE_STRING,
+            gobject.TYPE_STRING)
+
+        fcolumn = gtk.TreeViewColumn("Filename")
+        ftext_renderer = gtk.CellRendererText()
+        ficon_renderer = gtk.CellRendererPixbuf()
+        fcolumn.pack_start(ficon_renderer, False)
+        fcolumn.pack_start(ftext_renderer, False)
+        fcolumn.set_attributes(ftext_renderer, text=1)
+        fcolumn.set_attributes(ficon_renderer, pixbuf=0)
+
+        fcolumn2 = gtk.TreeViewColumn("Size")
+        ftext_renderer2 = gtk.CellRendererText()
+        fcolumn2.pack_start(ftext_renderer2, False)
+        fcolumn2.set_attributes(ftext_renderer2, text=3)
+        fcolumn3 = gtk.TreeViewColumn("Last modified")
+        ftext_renderer3 = gtk.CellRendererText()
+        fcolumn3.pack_start(ftext_renderer3, False)
+        fcolumn3.set_attributes(ftext_renderer3, text=2)
 
         self.dirlist = gtk.TreeView(self.dirmodel)
+        self.dirlist.append_column(dcolumn)
         self.dirlist.connect('row-activated', self.dir_activated, None)
 
         self.filelist = gtk.TreeView(self.filemodel)
+        self.filelist.append_column(fcolumn)
+        self.filelist.append_column(fcolumn2)
+        self.filelist.append_column(fcolumn3)
         self.filelist.connect('row-activated', self.file_activated, None)
 
         dirsel = self.dirlist.get_selection()
@@ -663,12 +712,12 @@ class HWindow(gtk.Window):
         filesel.set_mode(gtk.SELECTION_SINGLE)
         filesel.connect('changed', self.file_changed)
 
-        ren1 = gtk.CellRendererText()
-        col1 = gtk.TreeViewColumn("Directory name", ren1, text=0)
-        self.dirlist.append_column(col1)
-        ren2 = gtk.CellRendererText()
-        col2 = gtk.TreeViewColumn("File name", ren2, text=0)
-        self.filelist.append_column(col2)
+        # ren1 = gtk.CellRendererText()
+        # col1 = gtk.TreeViewColumn("Directory name", ren1, text=0)
+        # self.dirlist.append_column(col1)
+        # ren2 = gtk.CellRendererText()
+        # col2 = gtk.TreeViewColumn("File name", ren2, text=0)
+        # self.filelist.append_column(col2)
 
         self.sv1.add_with_viewport(self.dirlist)
         sv2.add_with_viewport(self.filelist)
