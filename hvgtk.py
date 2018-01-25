@@ -551,6 +551,9 @@ class HWindow(gtk.Window):
             else:
                 x = 0
                 y = 0
+            # To be clarified somehow:
+            # pixbuf.add_alpha(False, 127, 127, 127)
+            # pixbuf.composite(pb, x, y, pw, ph, 0, 0, 1, 1, gtk.gdk.INTERP_HYPER, 255)
             pixbuf.copy_area(0, 0, pw, ph, pb, x, y)
             self.image.set_picture(pb)
         else:
