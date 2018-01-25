@@ -25,6 +25,21 @@ BACKGROUND_CHECKERED = 3
 BACKGROUND_CUSTOM = 4
 
 
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['',
+                 'Ki',
+                 'Mi',
+                 'Gi',
+                 'Ti',
+                 'Pi',
+                 'Ei',
+                 'Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+
+
 def get_max_rect(w1, h1, w2, h2):
     w = w1 if w1 > w2 else w2
     h = h1 if h1 > h2 else h2
@@ -70,7 +85,7 @@ def getfiles(curdir=".", masks=[]):
             ts = datetime.datetime.fromtimestamp(
                 mtime).strftime('%Y-%m-%d %H:%M:%S')
             statinfo = os.stat(name)
-            size = statinfo.st_size
+            size = sizeof_fmt(statinfo.st_size)
             full.append([name, ts, size])
 
         return full
@@ -234,4 +249,3 @@ checkers = [
     "..................................................                                                  ",
     "..................................................                                                  ",
     "..................................................                                                  "]
-

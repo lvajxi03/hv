@@ -712,13 +712,6 @@ class HWindow(gtk.Window):
         filesel.set_mode(gtk.SELECTION_SINGLE)
         filesel.connect('changed', self.file_changed)
 
-        # ren1 = gtk.CellRendererText()
-        # col1 = gtk.TreeViewColumn("Directory name", ren1, text=0)
-        # self.dirlist.append_column(col1)
-        # ren2 = gtk.CellRendererText()
-        # col2 = gtk.TreeViewColumn("File name", ren2, text=0)
-        # self.filelist.append_column(col2)
-
         self.sv1.add_with_viewport(self.dirlist)
         sv2.add_with_viewport(self.filelist)
 
