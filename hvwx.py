@@ -263,20 +263,20 @@ class HvFrame(wx.Frame):
 
         itemNo = 0
         for f in hvcommon.getfiles(".", self.masks):
-            self.fileList.InsertStringItem(itemNo, f[0])
+            self.fileList.InsertItem(itemNo, f[0])
             self.fileList.SetItem(itemNo, 1, f[2])
             self.fileList.SetItem(itemNo, 2, f[1])
             itemNo += 1
 
-        self.dirList.InsertStringItem(0, '.')
-        self.dirList.InsertStringItem(0, '..')
+        self.dirList.InsertItem(0, '.')
+        self.dirList.InsertItem(0, '..')
         itemNo = 2
         for d in hvcommon.getdirs():
-            self.dirList.InsertStringItem(itemNo, d)
+            self.dirList.InsertItem(itemNo, d)
             itemNo += 1
 
         for drive in hvcommon.get_drives():
-            self.dirList.InsertStringItem(
+            self.dirList.InsertItem(
                 itemNo,
                 "%(letter)s:\\"
                 % {'letter': drive})
