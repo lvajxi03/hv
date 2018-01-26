@@ -186,42 +186,6 @@ def read_image(filename):
         return read_generic_image(filename)
 
 
-class HImage(gtk.Image):
-    def __init__(self):
-        gtk.Image.__init__(self)
-        self.picture = None
-        self.origin = None
-
-    def set_picture(self, picture):
-        self.origin = picture
-        self.picture = picture
-        self.display()
-
-    def get_picture(self):
-        return self.picture
-
-    def get_origin(self):
-        return self.origin
-
-    def display(self):
-        self.set_from_pixbuf(self.picture)
-
-    def rotate_left(self):
-        pass
-
-    def rotate_right(self):
-        pass
-
-    def reload(self):
-        pass
-
-    def flip_horiz(self):
-        pass
-
-    def flip_vert(self):
-        pass
-
-
 class HSettings(gtk.Dialog):
 
     def __init__(self):
@@ -440,20 +404,14 @@ class HWindow(gtk.Window):
             self.dirmodel.append(
                 [self.drive_icon,
                  "%(letter)s:\\" % {'letter': drive}])
-        if self.current:
-            cname = os.getcwd()
-            dname = os. path.dirname(self.current)
-            if not dname:
-                dname = os.getcwd()
-            if dname != cname:
-                self.current = ""
 
     def __init__(self, startupobj=""):
         self.settings = {}
         self.masks = []
-        self.current = ""
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.connect("destroy", self.quit)
+        self.origin = None
+        self.picture = None
         self.create_ui(startupobj)
 
     def quit(self, data=None):
@@ -463,7 +421,6 @@ class HWindow(gtk.Window):
     def dir_activated(self, treeview, path, column, user_data=None):
         sel = treeview.get_selection()
         (model, iter) = sel.get_selected()
-        # Dirname is under model[iter][0]
         newdir = os.path.join(os.getcwd(), model[iter][1])
         self.read_dir(newdir)
         self.update_title()
@@ -475,12 +432,7 @@ class HWindow(gtk.Window):
             print("Activated %(it)s"
                   % {'it': model[iter][1]})
 
-    def display_image(self, filename):
-        if 'background' in self.settings:
-            background = int(self.settings['background'])
-        else:
-            background = hvcommon.BACKGROUND_NONE
-
+    def display_file(self, filename):
         (type, encoding) = mimetypes.guess_type(filename)
         if not type:
             type = "unknown"
@@ -493,6 +445,41 @@ class HWindow(gtk.Window):
         status = "%(st)s, encoding: %(enc)s" \
                  % {'st': status,
                     'enc': encoding}
+        pixbuf = read_image(filename)
+        if pixbuf:
+            self.picture = pixbuf
+            self.origin = pixbuf
+        else:
+            self.picture = None
+            self.origin = None
+        self.display()
+        self.statusbar.push(0, status)
+
+    def rotate_left(self):
+        self.picture = self.picture.rotate_simple(90)
+        self.display()
+
+    def rotate_right(self):
+        self.picture = self.picture.rotate_simple(270)
+        self.display()
+
+    def reload(self):
+        self.picture = self.origin
+        self.display()
+
+    def flip_horiz(self):
+        self.picture = self.picture.flip(True)
+        self.display()
+
+    def flip_vert(self):
+        self.picture = self.picture.flip(False)
+        self.display()
+
+    def display(self):
+        if 'background' in self.settings:
+            background = int(self.settings['background'])
+        else:
+            background = hvcommon.BACKGROUND_NONE
 
         centered = False
         if 'centered' in self.settings:
@@ -508,11 +495,10 @@ class HWindow(gtk.Window):
         else:
             self.image.set_alignment(0, 0)
 
-        pixbuf = read_image(filename)
-        if pixbuf:
-            r = self.sv3.get_allocation()
-            pw = pixbuf.get_width()
-            ph = pixbuf.get_height()
+        if self.picture:
+            r = self.image.get_allocation()
+            pw = self.picture.get_width()
+            ph = self.picture.get_height()
             (w, h) = hvcommon.get_max_rect(
                 r.width,
                 r.height,
@@ -551,14 +537,12 @@ class HWindow(gtk.Window):
             else:
                 x = 0
                 y = 0
-            pixbuf.copy_area(0, 0, pw, ph, pb, x, y)
-            self.image.set_picture(pb)
+            self.picture.copy_area(0, 0, pw, ph, pb, x, y)
+            self.image.set_from_pixbuf(pb)
         else:
             self.image.set_from_stock(
                 gtk.STOCK_MISSING_IMAGE,
                 gtk.ICON_SIZE_LARGE_TOOLBAR)
-        self.statusbar.push(0, status)
-        self.current = filename
 
     def popup_image(self, widget, event, unused):
         if unused.get_visible():
@@ -579,8 +563,7 @@ class HWindow(gtk.Window):
         if iter is not None:
             filename = model[iter][1]
             fulln = os.path.join(os.getcwd(), filename)
-            self.display_image(fulln)
-            self.current = fulln
+            self.display_file(fulln)
 
     def show_settings(self, data=None):
         s_window = HSettings()
@@ -595,21 +578,20 @@ class HWindow(gtk.Window):
                         if mask:
                             self.masks.append(mask)
             self.read_dir()
-            if self.current:
-                self.display_image(self.current)
+            self.display()
         s_window.destroy()
 
     def click_flip_horiz(self, data=None):
-        pass
+        self.flip_horiz()
 
     def click_flip_vert(self, data=None):
-        pass
+        self.flip_vert()
 
     def click_rotate_cl(self, data=None):
-        pass
+        self.rotate_left()
 
     def click_rotate_cc(self, data=None):
-        pass
+        self.rotate_right()
 
     def create_ui(self, startupobj=""):
 
@@ -660,7 +642,6 @@ class HWindow(gtk.Window):
         dcolumn.set_attributes(dtext_renderer, text=1)
         dcolumn.set_attributes(dicon_renderer, pixbuf=0)
 
-        stock_fi = gtk.Image()
         self.file_icon = stock_di.render_icon(
             gtk.STOCK_FILE,
             gtk.ICON_SIZE_MENU)
@@ -718,8 +699,6 @@ class HWindow(gtk.Window):
         self.statusbar = gtk.Statusbar()
         self.statusbar.push(0, "/hv/")
 
-        self.image = HImage()
-
         hpaned = gtk.HPaned()
         vpaned = gtk.VPaned()
 
@@ -730,6 +709,7 @@ class HWindow(gtk.Window):
         self.sv3 = gtk.ScrolledWindow()
         self.sv3.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.evb = gtk.EventBox()
+        self.image = gtk.Image()
         self.evb.add(self.image)
         self.sv3.add_with_viewport(self.evb)
         hpaned.add2(self.sv3)
@@ -752,7 +732,7 @@ class HWindow(gtk.Window):
             if os.path.isfile(startupobj):
                 dname = os.path.dirname(startupobj)
                 self.read_dir(dname)
-                self.display_image(startupobj)
+                self.display_file(startupobj)
             elif os.path.isdir(startupobj):
                 self.read_dir(startupobj)
             else:
