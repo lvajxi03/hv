@@ -719,8 +719,23 @@ class HWindow(gtk.Window):
             self.popup_image,
             self.imagemenu)
 
+        # Toolbar
+        toolbar = gtk.Toolbar()
+        icon = gtk.Image()
+        icon.set_from_stock(
+            gtk.STOCK_REFRESH,
+            gtk.ICON_SIZE_LARGE_TOOLBAR)
+        toolbar.append_item(
+            "Reload",
+            "Reload image from disk",
+            None,
+            icon,
+            self.reload)
+        toolbar.append_space()
+
         vbox = gtk.VBox(False, 2)
         vbox.pack_start(menu_bar, False, False, 0)
+        vbox.pack_start(toolbar, False, False, 0)
         vbox.pack_start(hpaned, True, True, 1)
         vbox.pack_start(self.statusbar, False, False, 0)
 
