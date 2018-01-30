@@ -475,7 +475,7 @@ class HWindow(gtk.Window):
         self.picture = self.picture.flip(False)
         self.display()
 
-    def display(self):
+    def display(self, event=None, data=None):
         if 'background' in self.settings:
             background = int(self.settings['background'])
         else:
@@ -496,7 +496,7 @@ class HWindow(gtk.Window):
             self.image.set_alignment(0, 0)
 
         if self.picture:
-            r = self.image.get_allocation()
+            r = self.sv3.get_allocation()
             pw = self.picture.get_width()
             ph = self.picture.get_height()
             (w, h) = hvcommon.get_max_rect(
@@ -741,6 +741,7 @@ class HWindow(gtk.Window):
             self.set_configuration(hvcommon.readconfig(), True)
             self.read_dir()
         self.update_title()
+        self.connect('configure-event', self.display)
         self.show_all()
 
     def update_title(self):
