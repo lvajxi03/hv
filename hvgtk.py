@@ -169,6 +169,7 @@ image_loaders = {
     '.svg': read_svg_file,
     '.jpg': read_jpeg_file,
     '.bmp': read_pillow_file,
+    '.png': read_pillow_file,
     '.xpm': read_xpm_pixbuf,
     '.jpeg': read_jpeg_file}
 
@@ -510,6 +511,10 @@ class HWindow(gtk.Window):
                 8,
                 w,
                 h)
+            draw = self.image.get_window()
+            colormap = draw.get_colormap()
+            pi = gtk.gdk.Pixmap(draw, w, h, -1)
+            pi.set_colormap(colormap)
             self.image.clear()
             if background == hvcommon.BACKGROUND_WHITE:
                 pb.fill(0xffffffff)
@@ -531,14 +536,22 @@ class HWindow(gtk.Window):
                         wl = 100 if wl > 100 else wl
                         hl = 100 if hl > 100 else hl
                         chk.copy_area(0, 0, wl, hl, pb, i * 100, j * 100)
+                pi.draw_pixbuf(
+                    None,
+                    pb, 0, 0, 0, 0, w, h,
+                    gtk.gdk.RGB_DITHER_NORMAL, 0, 0)
 
             if centered:
                 (x, y) = hvcommon.get_location(w, h, pw, ph)
             else:
                 x = 0
                 y = 0
-            self.picture.copy_area(0, 0, pw, ph, pb, x, y)
-            self.image.set_from_pixbuf(pb)
+            pi.draw_pixbuf(
+                None,
+                self.picture,
+                0, 0, x, y, pw, ph,
+                gtk.gdk.RGB_DITHER_NORMAL, 0, 0)
+            self.image.set_from_pixmap(pi, None)
         else:
             self.image.set_from_stock(
                 gtk.STOCK_MISSING_IMAGE,
