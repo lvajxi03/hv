@@ -505,6 +505,10 @@ class HWindow(gtk.Window):
                 r.height,
                 pw,
                 ph)
+            if r.width >= pw and r.height >= ph:
+                self.sv3.set_policy(gtk.POLICY_NEVER, gtk.POLICY_NEVER)
+            else:
+                self.sv3.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
             pb = gtk.gdk.Pixbuf(
                 gtk.gdk.COLORSPACE_RGB,
                 True,
