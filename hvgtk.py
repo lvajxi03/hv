@@ -516,7 +516,16 @@ class HWindow(gtk.Window):
             pi = gtk.gdk.Pixmap(draw, w, h, -1)
             pi.set_colormap(colormap)
             self.image.clear()
-            if background == hvcommon.BACKGROUND_WHITE:
+            if background == hvcommon.BACKGROUND_NONE:
+                style = self.get_style()
+                style = style.bg[gtk.STATE_NORMAL]
+                red = style.red / 256
+                green = style.green / 256
+                blue = style.blue / 256
+                color = red * 65536 + green * 256 + blue
+                color = color * 256 + 255
+                pb.fill(color)
+            elif background == hvcommon.BACKGROUND_WHITE:
                 pb.fill(0xffffffff)
             elif background == hvcommon.BACKGROUND_BLACK:
                 pb.fill(0x000000ff)
@@ -536,10 +545,10 @@ class HWindow(gtk.Window):
                         wl = 100 if wl > 100 else wl
                         hl = 100 if hl > 100 else hl
                         chk.copy_area(0, 0, wl, hl, pb, i * 100, j * 100)
-                pi.draw_pixbuf(
-                    None,
-                    pb, 0, 0, 0, 0, w, h,
-                    gtk.gdk.RGB_DITHER_NORMAL, 0, 0)
+            pi.draw_pixbuf(
+                None,
+                pb, 0, 0, 0, 0, w, h,
+                gtk.gdk.RGB_DITHER_NORMAL, 0, 0)
 
             if centered:
                 (x, y) = hvcommon.get_location(w, h, pw, ph)
