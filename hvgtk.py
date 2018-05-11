@@ -7,6 +7,7 @@ import os
 import sys
 import glib
 import zipfile
+import subprocess
 import hvcommon
 
 try:
@@ -187,6 +188,68 @@ def read_image(filename):
         return read_generic_image(filename)
 
 
+class HEditors(gtk.Dialog):
+
+    def __init__(self):
+        gtk.Dialog.__init__(self,
+                            "Editors",
+                            None,
+                            gtk.DIALOG_MODAL,
+                            (gtk.STOCK_CANCEL,
+                             gtk.RESPONSE_REJECT,
+                             gtk.STOCK_OK,
+                             gtk.RESPONSE_ACCEPT))
+        self.editors = []
+        self.names = []
+        self.commands = []
+        frame = gtk.Frame(label="Available editors")
+        self.vbox.pack_start(frame)
+        table = gtk.Table(10, 6)
+        frame.add(table)
+        for i in range(10):
+            label = gtk.Label("Label: ")
+            table.attach(label, 0, 1, i, i+1)
+            entry = gtk.Entry()
+            self.names.append(entry)
+            table.attach(entry, 1, 2, i, i+1)
+            label = gtk.Label("Command: ")
+            table.attach(label, 2, 3, i, i+1)
+            entry = gtk.Entry()
+            self.commands.append(entry)
+            table.attach(entry, 3, 5, i, i+1)
+            button = gtk.Button("...")
+            button.connect('clicked', self.click_browse, i)
+            table.attach(button, 5, 6, i, i+1)
+        self.show_all()
+
+    def set_editors(self, editors=[]):
+        i = 0
+        for name, command in editors:
+            self.commands[i].set_text(name)
+            self.names[i].set_text(name)
+            i += 1
+
+    def get_editors(self):
+        editors = []
+        for i in range(10):
+            name = self.names[i].get_text()
+            command = self.commands[i].get_text()
+            if name and command:
+                editors.append((name, command))
+        return editors
+
+    def click_browse(self, widget, data=None):
+        dlg = gtk.FileChooserDialog(
+            "Find a program",
+            None,
+            gtk.DIALOG_MODAL | gtk.FILE_CHOOSER_ACTION_OPEN,
+            (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+             gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        response = dlg.run()
+        if response == gtk.RESPONSE_OK:
+            self.commands[data].set_text(dlg.get_filename())
+        dlg.destroy()
+
 class HSettings(gtk.Dialog):
 
     def __init__(self):
@@ -328,6 +391,8 @@ class HSettings(gtk.Dialog):
                 self.set_background(bg)
             except ValueError:
                 self.set_background(hvcommon.BACKGROUND_NONE)
+        if 'editors' in config:
+            self.editors = editors
 
 
 class HWindow(gtk.Window):
@@ -347,6 +412,12 @@ class HWindow(gtk.Window):
         configuration['browser']['w'] = "%(w)d" % {'w': r.width}
         configuration['browser']['h'] = "%(h)d" % {'h': r.height}
         configuration['settings'] = self.settings
+        configuration['editors'] = {}
+        for i in range(len(self.editors)):
+            (name, command) = self.editors[i]
+            if name and command:
+                configuration['editors']['name%(n)d' % {'n': i}] = name
+                configuration['editors']['command%(n)d' % {'n': i}] = command
         return configuration
 
     def set_configuration(self, configuration={}, chdir=False):
@@ -384,6 +455,19 @@ class HWindow(gtk.Window):
             pass
         if 'filemasks' in self.settings:
             self.masks = self.settings['filemasks'].split("|")
+        if 'editors' in configuration:
+            self.editors = configuration['editors']
+        self.update_editors()
+
+    def click_open_with(self, widget, data=None):
+        if data and self.current:
+            p = subprocess.Popen([data, self.current])
+
+    def update_editors(self):
+        for name, command in self.editors:
+            menu_item = gtk.MenuItem(name)
+            menu_item.connect('activate', self.click_open_with, command)
+            self.editors_submenu.append(menu_item)
 
     def read_dir(self, dirname="."):
         if not dirname:
@@ -409,6 +493,8 @@ class HWindow(gtk.Window):
     def __init__(self, startupobj=""):
         self.settings = {}
         self.masks = []
+        self.editors = []
+        self.current = None
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.connect("destroy", self.quit)
         self.origin = None
@@ -455,6 +541,7 @@ class HWindow(gtk.Window):
             self.origin = None
         self.display()
         self.statusbar.push(0, status)
+        self.current = filename
 
     def rotate_left(self):
         self.picture = self.picture.rotate_simple(90)
@@ -607,6 +694,15 @@ class HWindow(gtk.Window):
             self.display()
         s_window.destroy()
 
+    def show_editors(self, data=None):
+        e_window = HEditors()
+        e_window.set_editors(self.editors)
+        response = e_window.run()
+        if response == gtk.RESPONSE_ACCEPT:
+            self.editors = e_window.get_editors()
+            self.update_editors()
+        e_window.destroy()
+
     def click_flip_horiz(self, data=None):
         self.flip_horiz()
 
@@ -636,8 +732,8 @@ class HWindow(gtk.Window):
         self.imagemenu.append(menu_item)
         self.imagemenu.append(gtk.SeparatorMenuItem())
         menu_item = gtk.MenuItem("Open _with...")
-        submenu = gtk.Menu()
-        menu_item.set_submenu(submenu)
+        self.editors_submenu = gtk.Menu()
+        menu_item.set_submenu(self.editors_submenu)
         self.imagemenu.append(menu_item)
 
         menu_bar = gtk.MenuBar()
@@ -646,6 +742,9 @@ class HWindow(gtk.Window):
         menu_item.set_submenu(menu)
         menu_subitem = gtk.MenuItem("_Preferences")
         menu_subitem.connect('activate', self.show_settings)
+        menu.append(menu_subitem)
+        menu_subitem = gtk.MenuItem("_Editors")
+        menu_subitem.connect('activate', self.show_editors)
         menu.append(menu_subitem)
         menu_subitem = gtk.MenuItem("_Quit")
         menu_subitem.connect('activate', self.quit)

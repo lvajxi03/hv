@@ -132,6 +132,8 @@ def readconfig():
         fh.close()
     except IOError:
         pass
+    except OSError:
+        pass
     # Saturday night specials:
     if 'settings' in configuration:
         for key in ['centered', 'aspect', 'maximize', 'shrink']:
@@ -142,6 +144,17 @@ def readconfig():
                     configuration['settings'][key] = False
             except KeyError:
                 configuration['settings'][key] = False
+    editors = []
+    if 'editors' in configuration:
+        for i in range(10):
+            try:
+                name = configuration['editors']['name%(n)d' % {'n': i}]
+                command = configuration['editors']['command%(n)d' % {'n': i}]
+                if name and command:
+                    editors.append((name, command))
+            except KeyError:
+                pass
+    configuration['editors'] = editors
     return configuration
 
 
