@@ -52,6 +52,50 @@ def get_location(ww, wh, pw, ph):
     return (x, y)
 
 
+def is_bigger_than_dp(iw, ih, dw, dh):
+    """Is bigger than display port
+
+    This routine checks if an image is bigger than a display port
+
+    Args:
+        iw (int): image width
+        ih (int): image height
+        dw (int): display port width
+        dh (int): display port height
+
+    Returns:
+        bool: True if bigger, False otherwise
+    """
+    if iw > dw:
+        return True
+    if ih > dh:
+        return True
+    return False
+
+
+def calculate_shrink(iw, ih, dw, dh, aspect=True):
+    if is_bigger_than_dp(iw, ih, dw, dh):
+        if aspect:
+            f1 = (iw * 1.0)/(dw * 1.0)
+            f2 = (ih * 1.0)/(dh * 1.0)
+            f = max(f1, f2)
+            return (int((iw * 1.0)/f), int((ih * 1.0)/f))
+        return (dw, dh)
+    return (iw, ih)
+
+
+def calculate_zoom(iw, ih, dw, dh, aspect=True):
+    if is_bigger_than_dp(iw, ih, dw, dh):
+        return (iw, ih)
+    else:
+        if aspect:
+            f1 = (dw * 1.0)/(iw * 1.0)
+            f2 = (dh * 1.0)/(ih * 1.0)
+            f = min(f1, f2)
+            return (int(iw * f), int(ih * f))
+        return (dw, dh)
+
+
 def get_drives():
     drives = []
     if have_windows:

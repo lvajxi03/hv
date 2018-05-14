@@ -250,6 +250,7 @@ class HEditors(gtk.Dialog):
             self.commands[data].set_text(dlg.get_filename())
         dlg.destroy()
 
+
 class HSettings(gtk.Dialog):
 
     def __init__(self):
@@ -392,7 +393,7 @@ class HSettings(gtk.Dialog):
             except ValueError:
                 self.set_background(hvcommon.BACKGROUND_NONE)
         if 'editors' in config:
-            self.editors = editors
+            self.editors = config['editors']
 
 
 class HWindow(gtk.Window):
@@ -461,7 +462,7 @@ class HWindow(gtk.Window):
 
     def click_open_with(self, widget, data=None):
         if data and self.current:
-            p = subprocess.Popen([data, self.current])
+            subprocess.Popen([data, self.current])
 
     def update_editors(self):
         for name, command in self.editors:
@@ -491,6 +492,9 @@ class HWindow(gtk.Window):
                  "%(letter)s:\\" % {'letter': drive}])
 
     def __init__(self, startupobj=""):
+        self.flip_x = False
+        self.flip_y = False
+        self.rotate = 0
         self.settings = {}
         self.masks = []
         self.editors = []
@@ -542,13 +546,18 @@ class HWindow(gtk.Window):
         self.display()
         self.statusbar.push(0, status)
         self.current = filename
+        self.rotate = 0
+        self.flip_x = 0
+        self.flip_y = 0
 
     def rotate_left(self):
-        self.picture = self.picture.rotate_simple(90)
+        self.rotate += 1
+        self.rotate = self.rotate % 4
         self.display()
 
     def rotate_right(self):
-        self.picture = self.picture.rotate_simple(270)
+        self.rotate -= 1
+        self.rotate = self.rotate % 4
         self.display()
 
     def reload(self):
@@ -556,11 +565,11 @@ class HWindow(gtk.Window):
         self.display()
 
     def flip_horiz(self):
-        self.picture = self.picture.flip(True)
+        self.flip_x = not self.flip_x
         self.display()
 
     def flip_vert(self):
-        self.picture = self.picture.flip(False)
+        self.flip_y = not self.flip_y
         self.display()
 
     def display(self, event=None, data=None):
@@ -583,16 +592,47 @@ class HWindow(gtk.Window):
         else:
             self.image.set_alignment(0, 0)
 
+        self.picture = self.origin
         if self.picture:
+            self.picture = self.picture.rotate_simple(self.rotate * 90)
+            if self.flip_x:
+                self.picture = self.picture.flip(True)
+            if self.flip_y:
+                self.picture = self.picture.flip(False)
             r = self.sv3.get_allocation()
             pw = self.picture.get_width()
             ph = self.picture.get_height()
+
+            shrink = False
+            zoom = False
+            bigger = hvcommon.is_bigger_than_dp(
+                pw,
+                ph,
+                r.width,
+                r.height)
+            aspect = self.settings['aspect']
+            if bigger and self.settings['shrink']:
+                (pw, ph) = hvcommon.calculate_shrink(
+                    pw,
+                    ph,
+                    r.width,
+                    r.height,
+                    aspect)
+                shrink = True
+            elif not bigger and self.settings['maximize']:
+                (pw, ph) = hvcommon.calculate_zoom(
+                    pw,
+                    ph,
+                    r.width,
+                    r.height,
+                    aspect)
+                zoom = True
             (w, h) = hvcommon.get_max_rect(
                 r.width,
                 r.height,
                 pw,
                 ph)
-            if r.width >= pw and r.height >= ph:
+            if r.width >= w and r.height >= h:
                 self.sv3.set_policy(gtk.POLICY_NEVER, gtk.POLICY_NEVER)
             else:
                 self.sv3.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -646,6 +686,9 @@ class HWindow(gtk.Window):
             else:
                 x = 0
                 y = 0
+            if zoom or shrink:
+                self.picture = self.picture.scale_simple(
+                    pw, ph, gtk.gdk.INTERP_BILINEAR)
             pi.draw_pixbuf(
                 None,
                 self.picture,
