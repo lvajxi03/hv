@@ -225,7 +225,7 @@ class HEditors(gtk.Dialog):
     def set_editors(self, editors=[]):
         i = 0
         for name, command in editors:
-            self.commands[i].set_text(name)
+            self.commands[i].set_text(command)
             self.names[i].set_text(name)
             i += 1
 
@@ -465,7 +465,10 @@ class HWindow(gtk.Window):
             subprocess.Popen([data, self.current])
 
     def update_editors(self):
+        for item in self.editors_submenu:
+            self.editors_submenu.remove(item)
         for name, command in self.editors:
+            print name, command
             menu_item = gtk.MenuItem(name)
             menu_item.connect('activate', self.click_open_with, command)
             self.editors_submenu.append(menu_item)
