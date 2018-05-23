@@ -468,7 +468,6 @@ class HWindow(gtk.Window):
         for item in self.editors_submenu:
             self.editors_submenu.remove(item)
         for name, command in self.editors:
-            print name, command
             menu_item = gtk.MenuItem(name)
             menu_item.connect('activate', self.click_open_with, command)
             self.editors_submenu.append(menu_item)
@@ -546,12 +545,12 @@ class HWindow(gtk.Window):
         else:
             self.picture = None
             self.origin = None
-        self.display()
         self.statusbar.push(0, status)
         self.current = filename
         self.rotate = 0
         self.flip_x = 0
         self.flip_y = 0
+        self.display()
 
     def rotate_left(self):
         self.rotate += 1
