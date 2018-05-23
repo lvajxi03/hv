@@ -589,11 +589,6 @@ class HWindow(gtk.Window):
         else:
             centered = True
 
-        if centered:
-            self.image.set_alignment(0.5, 0.5)
-        else:
-            self.image.set_alignment(0, 0)
-
         self.picture = self.origin
         if self.picture:
             self.picture = self.picture.rotate_simple(self.rotate * 90)
@@ -601,40 +596,45 @@ class HWindow(gtk.Window):
                 self.picture = self.picture.flip(True)
             if self.flip_y:
                 self.picture = self.picture.flip(False)
-            r = self.sv3.get_allocation()
+            rw, rh = self.sv3.size_request()
             pw = self.picture.get_width()
             ph = self.picture.get_height()
+
+            if centered:
+                self.image.set_alignment(0.5, 0.5)
+            else:
+                self.image.set_alignment(0, 0)
 
             shrink = False
             zoom = False
             bigger = hvcommon.is_bigger_than_dp(
                 pw,
                 ph,
-                r.width,
-                r.height)
+                rw,
+                rh)
             aspect = self.settings['aspect']
             if bigger and self.settings['shrink']:
                 (pw, ph) = hvcommon.calculate_shrink(
                     pw,
                     ph,
-                    r.width,
-                    r.height,
+                    rw,
+                    rh,
                     aspect)
                 shrink = True
             elif not bigger and self.settings['maximize']:
                 (pw, ph) = hvcommon.calculate_zoom(
                     pw,
                     ph,
-                    r.width,
-                    r.height,
+                    rw,
+                    rh,
                     aspect)
                 zoom = True
             (w, h) = hvcommon.get_max_rect(
-                r.width,
-                r.height,
+                rw,
+                rh,
                 pw,
                 ph)
-            if r.width >= w and r.height >= h:
+            if rw >= w and rh >= h:
                 self.sv3.set_policy(gtk.POLICY_NEVER, gtk.POLICY_NEVER)
             else:
                 self.sv3.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -701,6 +701,8 @@ class HWindow(gtk.Window):
             self.image.set_from_stock(
                 gtk.STOCK_MISSING_IMAGE,
                 gtk.ICON_SIZE_LARGE_TOOLBAR)
+        gobject.idle_add(self.set_size_request, -1, -1)
+        gobject.idle_add(self.image.set_size_request, -1, -1)
 
     def popup_image(self, widget, event, unused):
         if unused.get_visible():
