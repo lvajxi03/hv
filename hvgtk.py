@@ -591,12 +591,16 @@ class HWindow(gtk.Window):
 
         self.picture = self.origin
         if self.picture:
+            self.image.set_size_request(1, 1)
+            self.sv3.set_size_request(1, 1)
             self.picture = self.picture.rotate_simple(self.rotate * 90)
             if self.flip_x:
                 self.picture = self.picture.flip(True)
             if self.flip_y:
                 self.picture = self.picture.flip(False)
-            rw, rh = self.sv3.size_request()
+            r = self.sv3.get_allocation()
+            rw = r.width
+            rh = r.height
             pw = self.picture.get_width()
             ph = self.picture.get_height()
 
@@ -634,10 +638,12 @@ class HWindow(gtk.Window):
                 rh,
                 pw,
                 ph)
-            if rw >= w and rh >= h:
-                self.sv3.set_policy(gtk.POLICY_NEVER, gtk.POLICY_NEVER)
+            if bigger and not zoom and not shrink:
+                self.sv3.set_policy(
+                    gtk.POLICY_AUTOMATIC,
+                    gtk.POLICY_AUTOMATIC)
             else:
-                self.sv3.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+                self.sv3.set_policy(gtk.POLICY_NEVER, gtk.POLICY_NEVER)
             pb = gtk.gdk.Pixbuf(
                 gtk.gdk.COLORSPACE_RGB,
                 True,
@@ -696,13 +702,12 @@ class HWindow(gtk.Window):
                 self.picture,
                 0, 0, x, y, pw, ph,
                 gtk.gdk.RGB_DITHER_NORMAL, 0, 0)
+            self.image.set_size_request(w, h)
             self.image.set_from_pixmap(pi, None)
         else:
             self.image.set_from_stock(
                 gtk.STOCK_MISSING_IMAGE,
                 gtk.ICON_SIZE_LARGE_TOOLBAR)
-        gobject.idle_add(self.set_size_request, -1, -1)
-        gobject.idle_add(self.image.set_size_request, -1, -1)
 
     def popup_image(self, widget, event, unused):
         if unused.get_visible():
@@ -913,7 +918,7 @@ class HWindow(gtk.Window):
             self.set_configuration(hvcommon.readconfig(), True)
             self.read_dir()
         self.update_title()
-        self.connect('configure-event', self.display)
+        self.connect('size-allocate', self.display)
         self.show_all()
 
     def update_title(self):
