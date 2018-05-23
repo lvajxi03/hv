@@ -699,11 +699,12 @@ class HWindow(gtk.Window):
                 self.picture = self.picture.scale_simple(
                     pw, ph, gtk.gdk.INTERP_BILINEAR)
             self.picture.add_alpha(False, 52, 9, 127)
-            pi.draw_pixbuf(
-                None,
-                self.picture,
-                0, 0, x, y, pw, ph,
-                gtk.gdk.RGB_DITHER_NORMAL, 0, 0)
+            pi.composite(self.picture, x, y, pw, ph, 0, 0, 1, 1, gtk.gtk.INTERP_HYPER, 255)
+            # pi.draw_pixbuf(
+            #     None,
+            #     self.picture,
+            #     0, 0, x, y, pw, ph,
+            #     gtk.gdk.RGB_DITHER_NORMAL, 0, 0)
             self.image.set_from_pixmap(pi, None)
         else:
             self.image.set_from_stock(
