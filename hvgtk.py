@@ -746,6 +746,17 @@ class HWindow(gtk.Window):
             self.display()
         s_window.destroy()
 
+    def show_about(self, data=None):
+        ab = gtk.MessageDialog(
+            self,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_INFO,
+            gtk.BUTTONS_CLOSE,
+            "hv\nPYGTK image viewer\n(C) Marcin Bielewicz, 2017-?")
+        ab.set_title("About hv")
+        ab.run()
+        ab.destroy()
+
     def show_editors(self, data=None):
         e_window = HEditors()
         e_window.set_editors(self.editors)
@@ -789,7 +800,7 @@ class HWindow(gtk.Window):
         self.imagemenu.append(menu_item)
 
         menu_bar = gtk.MenuBar()
-        menu_item = gtk.MenuItem("_hv")
+        menu_item = gtk.MenuItem("h_v")
         menu = gtk.Menu()
         menu_item.set_submenu(menu)
         menu_subitem = gtk.MenuItem("_Preferences")
@@ -801,6 +812,13 @@ class HWindow(gtk.Window):
         menu_subitem = gtk.MenuItem("_Quit")
         menu_subitem.connect('activate', self.quit)
         menu.append(menu_subitem)
+        menu_bar.append(menu_item)
+        menu_item = gtk.MenuItem("_Help")
+        menu = gtk.Menu()
+        menu_subitem = gtk.MenuItem("_About")
+        menu_subitem.connect('activate', self.show_about)
+        menu.append(menu_subitem)
+        menu_item.set_submenu(menu)
         menu_bar.append(menu_item)
         stock_hi = gtk.Image()
         self.drive_icon = stock_hi.render_icon(
