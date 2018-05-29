@@ -190,7 +190,14 @@ class HvFrame(wx.Frame):
         subitem = submenu.Append(wx.ID_EXIT)
         self.Bind(wx.EVT_MENU, self.OnExit, subitem)
         bar = wx.MenuBar()
-        bar.Append(submenu, "&hv")
+        bar.Append(submenu, "h&v")
+        submenu = wx.Menu()
+        subitem = submenu.Append(
+            -1,
+            "&About",
+            "About hv")
+        self.Bind(wx.EVT_MENU, self.OnAbout, subitem)
+        bar.Append(submenu, "&Help")
         self.SetMenuBar(bar)
 
         self.splitterV = wx.SplitterWindow(
@@ -247,6 +254,15 @@ class HvFrame(wx.Frame):
 
     def OnExit(self, event):
         self.Close(True)
+
+    def OnAbout(self, event):
+        ab = wx.MessageDialog(
+            self,
+            "hv\nwxPython image viewer\n(C) Marcin Bielewicz, 2017-?",
+            "About hv",
+            wx.OK | wx.ICON_INFORMATION)
+        ab.ShowModal()
+        ab.Destroy()
 
     def OnPreferences(self, event):
         hvPrefs = HvPreferences(self)
