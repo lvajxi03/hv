@@ -462,7 +462,19 @@ class HWindow(gtk.Window):
 
     def click_open_with(self, widget, data=None):
         if data and self.current:
-            subprocess.Popen([data, self.current])
+            try:
+                subprocess.Popen([data, self.current])
+            except OSError as oe:
+                ed = gtk.MessageDialog(
+                    self,
+                    gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+                    gtk.MESSAGE_ERROR,
+                    gtk.BUTTONS_CLOSE,
+                    "Error launching editor %(ed)s: %(er)s" %
+                    {'ed': data, 'er': str(oe)})
+                ed.set_title("Error")
+                ed.run()
+                ed.destroy()
 
     def update_editors(self):
         for item in self.editors_submenu:

@@ -14,7 +14,6 @@ try:
 except ImportError:
     pass
 
-
 DEFAULT_MASKS = "*.jpg|*.jpeg|*.png|*.gif|*.bmp|*.tga|" + \
                 "*.pcx|*.svg|*ico.|*.tiff|*.tif|*.ppm|*.pnm|*.idraw"
 
