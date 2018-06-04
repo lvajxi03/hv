@@ -7,6 +7,7 @@ import os
 import sys
 import glib
 import zipfile
+import subprocess
 import hvcommon
 
 try:
@@ -169,6 +170,7 @@ image_loaders = {
     '.svg': read_svg_file,
     '.jpg': read_jpeg_file,
     '.bmp': read_pillow_file,
+    '.png': read_pillow_file,
     '.xpm': read_xpm_pixbuf,
     '.jpeg': read_jpeg_file}
 
@@ -186,40 +188,67 @@ def read_image(filename):
         return read_generic_image(filename)
 
 
-class HImage(gtk.Image):
+class HEditors(gtk.Dialog):
+
     def __init__(self):
-        gtk.Image.__init__(self)
-        self.picture = None
-        self.origin = None
+        gtk.Dialog.__init__(self,
+                            "Editors",
+                            None,
+                            gtk.DIALOG_MODAL,
+                            (gtk.STOCK_CANCEL,
+                             gtk.RESPONSE_REJECT,
+                             gtk.STOCK_OK,
+                             gtk.RESPONSE_ACCEPT))
+        self.editors = []
+        self.names = []
+        self.commands = []
+        frame = gtk.Frame(label="Available editors")
+        self.vbox.pack_start(frame)
+        table = gtk.Table(10, 6)
+        frame.add(table)
+        for i in range(10):
+            label = gtk.Label("Label: ")
+            table.attach(label, 0, 1, i, i+1)
+            entry = gtk.Entry()
+            self.names.append(entry)
+            table.attach(entry, 1, 2, i, i+1)
+            label = gtk.Label("Command: ")
+            table.attach(label, 2, 3, i, i+1)
+            entry = gtk.Entry()
+            self.commands.append(entry)
+            table.attach(entry, 3, 5, i, i+1)
+            button = gtk.Button("...")
+            button.connect('clicked', self.click_browse, i)
+            table.attach(button, 5, 6, i, i+1)
+        self.show_all()
 
-    def set_picture(self, picture):
-        self.origin = picture
-        self.picture = picture
-        self.display()
+    def set_editors(self, editors=[]):
+        i = 0
+        for name, command in editors:
+            self.commands[i].set_text(command)
+            self.names[i].set_text(name)
+            i += 1
 
-    def get_picture(self):
-        return self.picture
+    def get_editors(self):
+        editors = []
+        for i in range(10):
+            name = self.names[i].get_text()
+            command = self.commands[i].get_text()
+            if name and command:
+                editors.append((name, command))
+        return editors
 
-    def get_origin(self):
-        return self.origin
-
-    def display(self):
-        self.set_from_pixbuf(self.picture)
-
-    def rotate_left(self):
-        pass
-
-    def rotate_right(self):
-        pass
-
-    def reload(self):
-        pass
-
-    def flip_horiz(self):
-        pass
-
-    def flip_vert(self):
-        pass
+    def click_browse(self, widget, data=None):
+        dlg = gtk.FileChooserDialog(
+            "Find a program",
+            None,
+            gtk.DIALOG_MODAL | gtk.FILE_CHOOSER_ACTION_OPEN,
+            (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+             gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        response = dlg.run()
+        if response == gtk.RESPONSE_OK:
+            self.commands[data].set_text(dlg.get_filename())
+        dlg.destroy()
 
 
 class HSettings(gtk.Dialog):
@@ -363,6 +392,8 @@ class HSettings(gtk.Dialog):
                 self.set_background(bg)
             except ValueError:
                 self.set_background(hvcommon.BACKGROUND_NONE)
+        if 'editors' in config:
+            self.editors = config['editors']
 
 
 class HWindow(gtk.Window):
@@ -382,6 +413,12 @@ class HWindow(gtk.Window):
         configuration['browser']['w'] = "%(w)d" % {'w': r.width}
         configuration['browser']['h'] = "%(h)d" % {'h': r.height}
         configuration['settings'] = self.settings
+        configuration['editors'] = {}
+        for i in range(len(self.editors)):
+            (name, command) = self.editors[i]
+            if name and command:
+                configuration['editors']['name%(n)d' % {'n': i}] = name
+                configuration['editors']['command%(n)d' % {'n': i}] = command
         return configuration
 
     def set_configuration(self, configuration={}, chdir=False):
@@ -419,6 +456,33 @@ class HWindow(gtk.Window):
             pass
         if 'filemasks' in self.settings:
             self.masks = self.settings['filemasks'].split("|")
+        if 'editors' in configuration:
+            self.editors = configuration['editors']
+        self.update_editors()
+
+    def click_open_with(self, widget, data=None):
+        if data and self.current:
+            try:
+                subprocess.Popen([data, self.current])
+            except OSError as oe:
+                ed = gtk.MessageDialog(
+                    self,
+                    gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+                    gtk.MESSAGE_ERROR,
+                    gtk.BUTTONS_CLOSE,
+                    "Error launching editor %(ed)s: %(er)s" %
+                    {'ed': data, 'er': str(oe)})
+                ed.set_title("Error")
+                ed.run()
+                ed.destroy()
+
+    def update_editors(self):
+        for item in self.editors_submenu:
+            self.editors_submenu.remove(item)
+        for name, command in self.editors:
+            menu_item = gtk.MenuItem(name)
+            menu_item.connect('activate', self.click_open_with, command)
+            self.editors_submenu.append(menu_item)
 
     def read_dir(self, dirname="."):
         if not dirname:
@@ -440,20 +504,21 @@ class HWindow(gtk.Window):
             self.dirmodel.append(
                 [self.drive_icon,
                  "%(letter)s:\\" % {'letter': drive}])
-        if self.current:
-            cname = os.getcwd()
-            dname = os. path.dirname(self.current)
-            if not dname:
-                dname = os.getcwd()
-            if dname != cname:
-                self.current = ""
+
+        self.update_title()
 
     def __init__(self, startupobj=""):
+        self.flip_x = False
+        self.flip_y = False
+        self.rotate = 0
         self.settings = {}
         self.masks = []
-        self.current = ""
+        self.editors = []
+        self.current = None
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.connect("destroy", self.quit)
+        self.origin = None
+        self.picture = None
         self.create_ui(startupobj)
 
     def quit(self, data=None):
@@ -463,10 +528,8 @@ class HWindow(gtk.Window):
     def dir_activated(self, treeview, path, column, user_data=None):
         sel = treeview.get_selection()
         (model, iter) = sel.get_selected()
-        # Dirname is under model[iter][0]
         newdir = os.path.join(os.getcwd(), model[iter][1])
         self.read_dir(newdir)
-        self.update_title()
 
     def file_activated(self, treeview, path, column, user_data=None):
         sel = treeview.get_selection()
@@ -475,12 +538,7 @@ class HWindow(gtk.Window):
             print("Activated %(it)s"
                   % {'it': model[iter][1]})
 
-    def display_image(self, filename):
-        if 'background' in self.settings:
-            background = int(self.settings['background'])
-        else:
-            background = hvcommon.BACKGROUND_NONE
-
+    def display_file(self, filename):
         (type, encoding) = mimetypes.guess_type(filename)
         if not type:
             type = "unknown"
@@ -493,6 +551,47 @@ class HWindow(gtk.Window):
         status = "%(st)s, encoding: %(enc)s" \
                  % {'st': status,
                     'enc': encoding}
+        pixbuf = read_image(filename)
+        if pixbuf:
+            self.picture = pixbuf
+            self.origin = pixbuf
+        else:
+            self.picture = None
+            self.origin = None
+        self.statusbar.push(0, status)
+        self.current = filename
+        self.rotate = 0
+        self.flip_x = 0
+        self.flip_y = 0
+        self.display()
+
+    def rotate_left(self):
+        self.rotate += 1
+        self.rotate = self.rotate % 4
+        self.display()
+
+    def rotate_right(self):
+        self.rotate -= 1
+        self.rotate = self.rotate % 4
+        self.display()
+
+    def reload(self):
+        self.picture = self.origin
+        self.display()
+
+    def flip_horiz(self):
+        self.flip_x = not self.flip_x
+        self.display()
+
+    def flip_vert(self):
+        self.flip_y = not self.flip_y
+        self.display()
+
+    def display(self, event=None, data=None):
+        if 'background' in self.settings:
+            background = int(self.settings['background'])
+        else:
+            background = hvcommon.BACKGROUND_NONE
 
         centered = False
         if 'centered' in self.settings:
@@ -503,29 +602,82 @@ class HWindow(gtk.Window):
         else:
             centered = True
 
-        if centered:
-            self.image.set_alignment(0.5, 0.5)
-        else:
-            self.image.set_alignment(0, 0)
-
-        pixbuf = read_image(filename)
-        if pixbuf:
+        self.picture = self.origin
+        if self.picture:
+            self.image.set_size_request(1, 1)
+            self.sv3.set_size_request(1, 1)
+            self.picture = self.picture.rotate_simple(self.rotate * 90)
+            if self.flip_x:
+                self.picture = self.picture.flip(True)
+            if self.flip_y:
+                self.picture = self.picture.flip(False)
             r = self.sv3.get_allocation()
-            pw = pixbuf.get_width()
-            ph = pixbuf.get_height()
+            rw = r.width
+            rh = r.height
+            pw = self.picture.get_width()
+            ph = self.picture.get_height()
+
+            if centered:
+                self.image.set_alignment(0.5, 0.5)
+            else:
+                self.image.set_alignment(0, 0)
+
+            shrink = False
+            zoom = False
+            bigger = hvcommon.is_bigger_than_dp(
+                pw,
+                ph,
+                rw,
+                rh)
+            aspect = self.settings['aspect']
+            if bigger and self.settings['shrink']:
+                (pw, ph) = hvcommon.calculate_shrink(
+                    pw,
+                    ph,
+                    rw,
+                    rh,
+                    aspect)
+                shrink = True
+            elif not bigger and self.settings['maximize']:
+                (pw, ph) = hvcommon.calculate_zoom(
+                    pw,
+                    ph,
+                    rw,
+                    rh,
+                    aspect)
+                zoom = True
             (w, h) = hvcommon.get_max_rect(
-                r.width,
-                r.height,
+                rw,
+                rh,
                 pw,
                 ph)
+            if bigger and not zoom and not shrink:
+                self.sv3.set_policy(
+                    gtk.POLICY_AUTOMATIC,
+                    gtk.POLICY_AUTOMATIC)
+            else:
+                self.sv3.set_policy(gtk.POLICY_NEVER, gtk.POLICY_NEVER)
             pb = gtk.gdk.Pixbuf(
                 gtk.gdk.COLORSPACE_RGB,
                 True,
                 8,
                 w,
                 h)
+            draw = self.image.get_window()
+            colormap = draw.get_colormap()
+            pi = gtk.gdk.Pixmap(draw, w, h, -1)
+            pi.set_colormap(colormap)
             self.image.clear()
-            if background == hvcommon.BACKGROUND_WHITE:
+            if background == hvcommon.BACKGROUND_NONE:
+                style = self.get_style()
+                style = style.bg[gtk.STATE_NORMAL]
+                red = style.red / 256
+                green = style.green / 256
+                blue = style.blue / 256
+                color = red * 65536 + green * 256 + blue
+                color = color * 256 + 255
+                pb.fill(color)
+            elif background == hvcommon.BACKGROUND_WHITE:
                 pb.fill(0xffffffff)
             elif background == hvcommon.BACKGROUND_BLACK:
                 pb.fill(0x000000ff)
@@ -545,20 +697,30 @@ class HWindow(gtk.Window):
                         wl = 100 if wl > 100 else wl
                         hl = 100 if hl > 100 else hl
                         chk.copy_area(0, 0, wl, hl, pb, i * 100, j * 100)
+            pi.draw_pixbuf(
+                None,
+                pb, 0, 0, 0, 0, w, h,
+                gtk.gdk.RGB_DITHER_NORMAL, 0, 0)
 
             if centered:
                 (x, y) = hvcommon.get_location(w, h, pw, ph)
             else:
                 x = 0
                 y = 0
-            pixbuf.copy_area(0, 0, pw, ph, pb, x, y)
-            self.image.set_picture(pb)
+            if zoom or shrink:
+                self.picture = self.picture.scale_simple(
+                    pw, ph, gtk.gdk.INTERP_BILINEAR)
+            pi.draw_pixbuf(
+                None,
+                self.picture,
+                0, 0, x, y, pw, ph,
+                gtk.gdk.RGB_DITHER_NORMAL, 0, 0)
+            self.image.set_size_request(w, h)
+            self.image.set_from_pixmap(pi, None)
         else:
             self.image.set_from_stock(
                 gtk.STOCK_MISSING_IMAGE,
                 gtk.ICON_SIZE_LARGE_TOOLBAR)
-        self.statusbar.push(0, status)
-        self.current = filename
 
     def popup_image(self, widget, event, unused):
         if unused.get_visible():
@@ -579,8 +741,7 @@ class HWindow(gtk.Window):
         if iter is not None:
             filename = model[iter][1]
             fulln = os.path.join(os.getcwd(), filename)
-            self.display_image(fulln)
-            self.current = fulln
+            self.display_file(fulln)
 
     def show_settings(self, data=None):
         s_window = HSettings()
@@ -595,21 +756,40 @@ class HWindow(gtk.Window):
                         if mask:
                             self.masks.append(mask)
             self.read_dir()
-            if self.current:
-                self.display_image(self.current)
+            self.display()
         s_window.destroy()
 
+    def show_about(self, data=None):
+        ab = gtk.MessageDialog(
+            self,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_INFO,
+            gtk.BUTTONS_CLOSE,
+            "hv\nPYGTK image viewer\n(C) Marcin Bielewicz, 2017-?")
+        ab.set_title("About hv")
+        ab.run()
+        ab.destroy()
+
+    def show_editors(self, data=None):
+        e_window = HEditors()
+        e_window.set_editors(self.editors)
+        response = e_window.run()
+        if response == gtk.RESPONSE_ACCEPT:
+            self.editors = e_window.get_editors()
+            self.update_editors()
+        e_window.destroy()
+
     def click_flip_horiz(self, data=None):
-        pass
+        self.flip_horiz()
 
     def click_flip_vert(self, data=None):
-        pass
+        self.flip_vert()
 
     def click_rotate_cl(self, data=None):
-        pass
+        self.rotate_left()
 
     def click_rotate_cc(self, data=None):
-        pass
+        self.rotate_right()
 
     def create_ui(self, startupobj=""):
 
@@ -628,20 +808,30 @@ class HWindow(gtk.Window):
         self.imagemenu.append(menu_item)
         self.imagemenu.append(gtk.SeparatorMenuItem())
         menu_item = gtk.MenuItem("Open _with...")
-        submenu = gtk.Menu()
-        menu_item.set_submenu(submenu)
+        self.editors_submenu = gtk.Menu()
+        menu_item.set_submenu(self.editors_submenu)
         self.imagemenu.append(menu_item)
 
         menu_bar = gtk.MenuBar()
-        menu_item = gtk.MenuItem("_hv")
+        menu_item = gtk.MenuItem("h_v")
         menu = gtk.Menu()
         menu_item.set_submenu(menu)
         menu_subitem = gtk.MenuItem("_Preferences")
         menu_subitem.connect('activate', self.show_settings)
         menu.append(menu_subitem)
+        menu_subitem = gtk.MenuItem("_Editors")
+        menu_subitem.connect('activate', self.show_editors)
+        menu.append(menu_subitem)
         menu_subitem = gtk.MenuItem("_Quit")
         menu_subitem.connect('activate', self.quit)
         menu.append(menu_subitem)
+        menu_bar.append(menu_item)
+        menu_item = gtk.MenuItem("_Help")
+        menu = gtk.Menu()
+        menu_subitem = gtk.MenuItem("_About")
+        menu_subitem.connect('activate', self.show_about)
+        menu.append(menu_subitem)
+        menu_item.set_submenu(menu)
         menu_bar.append(menu_item)
         stock_hi = gtk.Image()
         self.drive_icon = stock_hi.render_icon(
@@ -660,7 +850,6 @@ class HWindow(gtk.Window):
         dcolumn.set_attributes(dtext_renderer, text=1)
         dcolumn.set_attributes(dicon_renderer, pixbuf=0)
 
-        stock_fi = gtk.Image()
         self.file_icon = stock_di.render_icon(
             gtk.STOCK_FILE,
             gtk.ICON_SIZE_MENU)
@@ -718,8 +907,6 @@ class HWindow(gtk.Window):
         self.statusbar = gtk.Statusbar()
         self.statusbar.push(0, "/hv/")
 
-        self.image = HImage()
-
         hpaned = gtk.HPaned()
         vpaned = gtk.VPaned()
 
@@ -730,6 +917,7 @@ class HWindow(gtk.Window):
         self.sv3 = gtk.ScrolledWindow()
         self.sv3.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.evb = gtk.EventBox()
+        self.image = gtk.Image()
         self.evb.add(self.image)
         self.sv3.add_with_viewport(self.evb)
         hpaned.add2(self.sv3)
@@ -752,7 +940,7 @@ class HWindow(gtk.Window):
             if os.path.isfile(startupobj):
                 dname = os.path.dirname(startupobj)
                 self.read_dir(dname)
-                self.display_image(startupobj)
+                self.display_file(startupobj)
             elif os.path.isdir(startupobj):
                 self.read_dir(startupobj)
             else:
@@ -760,7 +948,7 @@ class HWindow(gtk.Window):
         else:
             self.set_configuration(hvcommon.readconfig(), True)
             self.read_dir()
-        self.update_title()
+        self.connect('size-allocate', self.display)
         self.show_all()
 
     def update_title(self):

@@ -2,6 +2,7 @@
 
 import wx
 import os
+import sys
 import hvcommon
 
 
@@ -18,7 +19,7 @@ class HvImage(wx.Panel):
         self.shrink = False
         self.zoom = False
 
-    def loadImage(self, filename):
+    def display_file(self, filename):
         self.image = wx.Image()
         if self.image.CanRead(filename):
             self.image.LoadFile(filename)
@@ -75,6 +76,87 @@ class HvImage(wx.Panel):
     def OnPaintEvent(self, event):
         dc = wx.ClientDC(self)
         self.render(dc)
+
+
+class HEditors(wx.Dialog):
+    def __init__(self, parent):
+        wx.Dialog.__init__(
+            self,
+            parent,
+            title="Editors",
+        )
+
+        self.labels = []
+        self.commands = []
+        self.bindings = {}
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        panel = wx.Panel(self, 1)
+        sb = wx.StaticBox(panel, label='Available editors')
+        sbs = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
+        panel2 = wx.Panel(panel, 1)
+        sbs.Add(panel2, 0, wx.EXPAND | wx.ALL, 1)
+        gs = wx.GridSizer(5, gap=wx.Size(2, 2))
+        for i in range(10):
+            l = wx.StaticText(panel2, label="label: ")
+            gs.Add(l)
+            t = wx.TextCtrl(panel2)
+            self.labels.append(t)
+            gs.Add(t)
+            l = wx.StaticText(panel2, label="command: ")
+            gs.Add(l)
+            c = wx.TextCtrl(panel2)
+            self.commands.append(c)
+            gs.Add(c)
+            b = wx.Button(panel2, label="...")
+            b.Bind(wx.EVT_BUTTON, self.OnBrowse)
+            self.bindings[b] = c
+            gs.Add(b)
+        panel2.SetSizer(gs)
+        panel.SetSizer(sbs)
+        vbox.Add(panel, 1, wx.EXPAND)
+        s = self.CreateButtonSizer(wx.OK | wx.CANCEL)
+        vbox.Add(s, 0, wx.EXPAND)
+        self.SetSizer(vbox)
+        self.Fit()
+
+    def OnAccept(self, event):
+        self.Destroy()
+
+    def OnClose(self, event):
+        self.Destroy()
+
+    def OnBrowse(self, event):
+        fd = wx.FileDialog(
+            self,
+            "Open",
+            "",
+            "",
+            "",
+            wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
+        fd.ShowModal()
+        p = fd.GetPath()
+        if p:
+            b = event.GetEventObject()
+            c = self.bindings[b]
+            c.SetLabel(p)
+        fd.Destroy()
+
+    def set_editors(self, editors=[]):
+        le = len(editors)
+        for i in range(le):
+            e = editors[i]
+            (l, c) = e
+            self.labels[i].SetValue(l)
+            self.commands[i].SetValue(c)
+
+    def get_editors(self):
+        editors = []
+        for i in range(10):
+            l = self.labels[i].GetValue()
+            c = self.commands[i].GetValue()
+            if l and c:
+                editors.append((l, c))
+        return editors
 
 
 class HvPreferences(wx.Dialog):
@@ -171,26 +253,39 @@ class HvPreferences(wx.Dialog):
 
 
 class HvFrame(wx.Frame):
-    def __init__(self, parent, title):
+    def __init__(self, startupobj):
         wx.Frame.__init__(
             self,
-            parent,
-            title=title,
+            None,
+            title="/hv/",
             size=(800, 600))
         self.masks = []
-        self.create_ui()
+        self.create_ui(startupobj)
 
-    def create_ui(self):
+    def create_ui(self, startupobj=None):
         submenu = wx.Menu()
         subitem = submenu.Append(
             -1,
             "&Preferences\tCtrl-P",
             "Show preferences dialog")
         self.Bind(wx.EVT_MENU, self.OnPreferences, subitem)
+        subitem = submenu.Append(
+            -1,
+            "&Editors\tCtrl-E",
+            "Show editors dialog")
+        self.Bind(wx.EVT_MENU, self.show_editors, subitem)
+        subitem = submenu.Append(wx.ID_SEPARATOR)
         subitem = submenu.Append(wx.ID_EXIT)
         self.Bind(wx.EVT_MENU, self.OnExit, subitem)
         bar = wx.MenuBar()
-        bar.Append(submenu, "&hv")
+        bar.Append(submenu, "h&v")
+        submenu = wx.Menu()
+        subitem = submenu.Append(
+            -1,
+            "&About",
+            "About hv")
+        self.Bind(wx.EVT_MENU, self.OnAbout, subitem)
+        bar.Append(submenu, "&Help")
         self.SetMenuBar(bar)
 
         self.splitterV = wx.SplitterWindow(
@@ -234,10 +329,30 @@ class HvFrame(wx.Frame):
         self.CreateStatusBar()
         self.SetStatusText("/hv/")
 
+        if startupobj:
+            self.set_configuration(hvcommon.readconfig(), False)
+            if os.path.isfile(startupobj):
+                dname = os.path.dirname(startupobj)
+                self.read_dir(dname)
+                self.display_file(startupobj)
+            elif os.path.isdir(startupobj):
+                self.read_dir(startupobj)
+            else:
+                self.read_dir()
+        else:
+            self.set_configuration(hvcommon.readconfig(), True)
+            self.read_dir()
+
+    def update_title(self):
+        self.SetTitle("%(d)s - /hv/" % {'d': os.getcwd()})
+
+    def display_file(self, filename):
+        self.imagePanel.display_file(filename)
+
     def OnSelectFileList(self, event):
         item = event.GetItem()
         text = item.GetText()
-        self.imagePanel.loadImage(text)
+        self.display_file(text)
 
     def OnDblClickDirList(self, event):
         dname = event.GetItem().GetText()
@@ -245,13 +360,74 @@ class HvFrame(wx.Frame):
             dname = "."
         self.read_dir(dname)
 
+    def show_editors(self, event):
+        e = HEditors(self)
+        e.set_editors(self.editors)
+        r = e.ShowModal()
+        if r == wx.ID_OK:
+            self.editors = e.get_editors()
+        e.Destroy()
+
     def OnExit(self, event):
         self.Close(True)
+
+    def OnAbout(self, event):
+        ab = wx.MessageDialog(
+            self,
+            "hv\nwxPython image viewer\n(C) Marcin Bielewicz, 2017-?",
+            "About hv",
+            wx.OK | wx.ICON_INFORMATION)
+        ab.ShowModal()
+        ab.Destroy()
 
     def OnPreferences(self, event):
         hvPrefs = HvPreferences(self)
         hvPrefs.ShowModal()
         hvPrefs.Destroy()
+
+    def set_configuration(self, configuration={}, chdir=False):
+        try:
+            x = int(configuration['window']['x'])
+            y = int(configuration['window']['y'])
+            self.Move(wx.Point(x, y))
+        except KeyError:
+            pass
+        try:
+            w = int(configuration['window']['w'])
+            h = int(configuration['window']['h'])
+            self.SetSize(wx.Size(w, h))
+        except KeyError:
+            pass
+        try:
+            ld = configuration['browser']['lastdir']
+            if chdir and ld:
+                os.chdir(ld)
+        except KeyError:
+            pass
+        except IOError:
+            pass
+        except OSError:
+            pass
+        # try:
+        #     w = int(configuration['browser']['w'])
+        #     h = int(configuration['browser']['h'])
+        #     self.sv1.set_size_request(w, h)
+        # except KeyError:
+        #     pass
+        try:
+            self.settings = configuration['settings']
+        except KeyError:
+            pass
+        if 'filemasks' in self.settings:
+            self.masks = self.settings['filemasks'].split("|")
+        if 'editors' in configuration:
+            self.editors = configuration['editors']
+        else:
+            self.editors = []
+        self.update_editors()
+
+    def update_editors(self):
+        pass
 
     def read_dir(self, dirname="."):
         if not dirname:
@@ -281,15 +457,17 @@ class HvFrame(wx.Frame):
                 "%(letter)s:\\"
                 % {'letter': drive})
             itemNo += 1
-        self.SetTitle(
-            "%(d)s - /hv/"
-            % {
-                'd': os.getcwd()})
+        self.update_title()
 
 
-hvApp = wx.App()
-hvFrame = HvFrame(None, "/hv/")
-hvFrame.read_dir()
+if __name__ == "__main__":
+    try:
+        so = sys.argv[1]
+    except IndexError:
+        so = None
+    hvApp = wx.App()
+    hvFrame = HvFrame(so)
+    hvFrame.read_dir()
 
-hvFrame.Show()
-hvApp.MainLoop()
+    hvFrame.Show()
+    hvApp.MainLoop()
