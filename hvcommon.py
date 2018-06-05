@@ -204,7 +204,7 @@ def readconfig():
         pass
     # Saturday night specials:
     if 'settings' in configuration:
-        for key in ['centered', 'aspect', 'maximize', 'shrink']:
+        for key in ['centered', 'aspect', 'maximize', 'shrink', 'usemask']:
             try:
                 if configuration['settings'][key] == 'True':
                     configuration['settings'][key] = True
