@@ -551,12 +551,12 @@ class HWindow(wx.Frame):
             pass
         except OSError:
             pass
-        # try:
-        #     w = int(configuration['browser']['w'])
-        #     h = int(configuration['browser']['h'])
-        #     self.sv1.set_size_request(w, h)
-        # except KeyError:
-        #     pass
+        try:
+            w = int(configuration['browser']['w'])
+            h = int(configuration['browser']['h'])
+            self.image.SetSize(wx.Size(w, h))
+        except KeyError:
+            pass
         try:
             self.settings = configuration['settings']
         except KeyError:
