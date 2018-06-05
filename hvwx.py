@@ -176,6 +176,7 @@ class HSettings(wx.Dialog):
         self.masks = wx.CheckBox(
             panel,
             label='Accept following file masks:')
+        self.masks.Bind(wx.EVT_CHECKBOX, self.toggle_filemasks)
         sbs.Add(self.masks, 0, wx.EXPAND | wx.ALL, 5)
         self.entry = wx.TextCtrl(panel)
         sbs.Add(self.entry, 0, wx.EXPAND | wx.ALL, 5)
@@ -246,7 +247,7 @@ class HSettings(wx.Dialog):
         self.Fit()
 
     def toggle_filemasks(self, event):
-        pass
+        self.entry.Enable(self.masks.GetValue())
 
     def is_centered(self):
         return self.se_centered.GetValue()
@@ -266,8 +267,15 @@ class HSettings(wx.Dialog):
     def set_zoom(self, zoom=True):
         self.se_zoom.SetValue(zoom)
 
+    def set_usemask(self, usemask=True):
+        self.masks.SetValue(usemask)
+        self.entry.Enable(usemask)
+
+    def is_usemask(self):
+        return self.masks.GetValue()
+
     def get_filemasks(self):
-        return self.entry.GetValue() if self.masks.GetValue() else ""
+        return self.entry.GetValue()
 
     def get_background(self):
         if self.bg_none.GetValue():
@@ -309,6 +317,7 @@ class HSettings(wx.Dialog):
         config['aspect'] = self.is_aspect()
         config['maximize'] = self.is_zoom()
         config['shrink'] = self.is_shrink()
+        config['usemask'] = self.is_usemask()
         config['background'] = "%(b)d" % {'b': self.get_background()}
         return config
 
@@ -323,6 +332,8 @@ class HSettings(wx.Dialog):
             self.set_zoom(config['maximize'])
         if 'shrink' in config:
             self.set_shrink(config['shrink'])
+        if 'usemask' in config:
+            self.set_usemask(config['usemask'])
         if 'background' in config:
             try:
                 bg = int(config['background'])
@@ -569,7 +580,8 @@ class HWindow(wx.Frame):
         self.dirList.DeleteAllItems()
 
         itemNo = 0
-        for f in hvcommon.getfiles(".", self.masks):
+        masks = self.masks if self.settings['usemask'] else []
+        for f in hvcommon.getfiles(".", masks):
             self.fileList.InsertStringItem(itemNo, f[0])
             self.fileList.SetItem(itemNo, 1, f[2])
             self.fileList.SetItem(itemNo, 2, f[1])
