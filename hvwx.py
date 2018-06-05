@@ -95,7 +95,7 @@ class HEditors(wx.Dialog):
         sbs = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
         panel2 = wx.Panel(panel, 1)
         sbs.Add(panel2, 0, wx.EXPAND | wx.ALL, 1)
-        gs = wx.GridSizer(5, gap=wx.Size(2, 2))
+        gs = wx.GridSizer(5)
         for i in range(10):
             l = wx.StaticText(panel2, label="label: ")
             gs.Add(l)
@@ -309,9 +309,10 @@ class HvFrame(wx.Frame):
             wx.ID_ANY,
             wx.DefaultPosition,
             wx.DefaultSize,
-            wx.LC_REPORT | wx.LC_NO_HEADER)
+            wx.LC_REPORT | wx.LC_VRULES)
         self.dirList.InsertColumn(0, 'Directory name')
         self.dirList.InsertColumn(1, 'Date')
+        self.dirList.InsertColumn(2, 'Size')
         self.dirList.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnDblClickDirList)
         self.fileList = wx.ListCtrl(
             self.splitterH,
@@ -347,7 +348,7 @@ class HvFrame(wx.Frame):
         self.SetTitle("%(d)s - /hv/" % {'d': os.getcwd()})
 
     def display_file(self, filename):
-        self.imagePanel.display_file(filename)
+        self.image.display_file(filename)
 
     def OnSelectFileList(self, event):
         item = event.GetItem()
@@ -437,26 +438,18 @@ class HvFrame(wx.Frame):
         self.fileList.DeleteAllItems()
         self.dirList.DeleteAllItems()
 
-        itemNo = 0
         for f in hvcommon.getfiles(".", self.masks):
-            self.fileList.InsertItem(itemNo, f[0])
-            self.fileList.SetItem(itemNo, 1, f[2])
-            self.fileList.SetItem(itemNo, 2, f[1])
-            itemNo += 1
+            self.fileList.Append((f[0], f[2], f[1]))
 
-        self.dirList.InsertItem(0, '.')
-        self.dirList.InsertItem(0, '..')
-        itemNo = 2
-        for d in hvcommon.getdirs():
-            self.dirList.InsertItem(itemNo, d)
-            itemNo += 1
+        # self.dirList.Append(('.'))
+        # self.dirList.Append(('..'))
+        for d in hvcommon.getdirs_full():
+            self.dirList.Append((d[0], d[1], d[2]))
 
         for drive in hvcommon.get_drives():
-            self.dirList.InsertItem(
-                itemNo,
+            self.dirList.Append((
                 "%(letter)s:\\"
-                % {'letter': drive})
-            itemNo += 1
+                % {'letter': drive}, '', ''))
         self.update_title()
 
 
