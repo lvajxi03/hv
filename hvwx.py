@@ -25,7 +25,7 @@ class HvImage(wx.Panel):
             self.image.LoadFile(filename)
         else:
             self.image = None
-        self.paint()
+        self.display()
 
     def render(self, dc):
         if self.image:
@@ -69,7 +69,7 @@ class HvImage(wx.Panel):
         else:
             dc.Clear()
 
-    def paint(self):
+    def display(self):
         dc = wx.ClientDC(self)
         self.render(dc)
 
@@ -138,7 +138,7 @@ class HEditors(wx.Dialog):
         if p:
             b = event.GetEventObject()
             c = self.bindings[b]
-            c.SetLabel(p)
+            c.SetValue(p)
         fd.Destroy()
 
     def set_editors(self, editors=[]):
@@ -159,7 +159,7 @@ class HEditors(wx.Dialog):
         return editors
 
 
-class HvPreferences(wx.Dialog):
+class HSettings(wx.Dialog):
     def __init__(self, parent):
         wx.Dialog.__init__(
             self,
@@ -194,17 +194,17 @@ class HvPreferences(wx.Dialog):
         self.bg_white = wx.RadioButton(
             panel,
             label='White',
-            style=wx.RB_GROUP)
+            )
         sbs.Add(self.bg_white)
         self.bg_black = wx.RadioButton(
             panel,
             label='Black',
-            style=wx.RB_GROUP)
+            )
         sbs.Add(self.bg_black)
         self.bg_checkered = wx.RadioButton(
             panel,
             label='Checkered',
-            style=wx.RB_GROUP)
+            )
         sbs.Add(self.bg_checkered)
 
         panel.SetSizer(sbs)
@@ -245,6 +245,93 @@ class HvPreferences(wx.Dialog):
         self.SetSizer(vbox)
         self.Fit()
 
+    def toggle_filemasks(self, event):
+        pass
+
+    def is_centered(self):
+        return self.se_centered.GetValue()
+
+    def set_centered(self, centered=True):
+        self.se_centered.SetValue(centered)
+
+    def is_aspect(self):
+        return self.se_aspect.GetValue()
+
+    def set_aspect(self, aspect=True):
+        self.se_aspect.SetValue(aspect)
+
+    def is_zoom(self):
+        return self.se_zoom.GetValue()
+
+    def set_zoom(self, zoom=True):
+        self.se_zoom.SetValue(zoom)
+
+    def get_filemasks(self):
+        return self.entry.GetValue() if self.masks.GetValue() else ""
+
+    def get_background(self):
+        if self.bg_none.GetValue():
+            return hvcommon.BACKGROUND_NONE
+        elif self.bg_white.GetValue():
+            return hvcommon.BACKGROUND_WHITE
+        elif self.bg_black.GetValue():
+            return hvcommon.BACKGROUND_BLACK
+        elif self.bg_checkered.GetValue():
+            return hvcommon.BACKGROUND_CHECKERED
+        else:
+            return hvcommon.BACKGROUND_NONE
+
+    def set_background(self, background):
+        if background == hvcommon.BACKGROUND_WHITE:
+            self.bg_white.SetValue(True)
+        elif background == hvcommon.BACKGROUND_BLACK:
+            self.bg_black.SetValue(True)
+        elif background == hvcommon.BACKGROUND_CHECKERED:
+            self.bg_checkered.SetValue(True)
+        else:
+            self.bg_none.SetValue(True)
+
+    def set_filemasks(self, masks):
+        if masks:
+            self.entry.SetValue(masks)
+            self.masks.SetValue(True)
+
+    def set_shrink(self, shrink=True):
+        self.se_shrink.SetValue(shrink)
+
+    def is_shrink(self):
+        return self.se_shrink.GetValue()
+
+    def get_config(self):
+        config = {}
+        config['filemasks'] = self.get_filemasks()
+        config['centered'] = self.is_centered()
+        config['aspect'] = self.is_aspect()
+        config['maximize'] = self.is_zoom()
+        config['shrink'] = self.is_shrink()
+        config['background'] = "%(b)d" % {'b': self.get_background()}
+        return config
+
+    def set_config(self, config={}):
+        if 'filemasks' in config:
+            self.set_filemasks(config['filemasks'])
+        if 'centered' in config:
+            self.set_centered(config['centered'])
+        if 'aspect' in config:
+            self.set_aspect(config['aspect'])
+        if 'maximize' in config:
+            self.set_zoom(config['maximize'])
+        if 'shrink' in config:
+            self.set_shrink(config['shrink'])
+        if 'background' in config:
+            try:
+                bg = int(config['background'])
+                self.set_background(bg)
+            except ValueError:
+                self.set_background(hvcommon.BACKGROUND_NONE)
+        if 'editors' in config:
+            self.editors = config['editors']
+
     def OnAccept(self, event):
         self.Destroy()
 
@@ -252,7 +339,7 @@ class HvPreferences(wx.Dialog):
         self.Destroy()
 
 
-class HvFrame(wx.Frame):
+class HWindow(wx.Frame):
     def __init__(self, startupobj):
         wx.Frame.__init__(
             self,
@@ -260,6 +347,15 @@ class HvFrame(wx.Frame):
             title="/hv/",
             size=(800, 600))
         self.masks = []
+        self.flip_x = False
+        self.flip_y = False
+        self.rotate = 0
+        self.settings = {}
+        self.masks = []
+        self.editors = []
+        self.current = None
+        self.origin = None
+        self.picture = None
         self.create_ui(startupobj)
 
     def create_ui(self, startupobj=None):
@@ -268,7 +364,7 @@ class HvFrame(wx.Frame):
             -1,
             "&Preferences\tCtrl-P",
             "Show preferences dialog")
-        self.Bind(wx.EVT_MENU, self.OnPreferences, subitem)
+        self.Bind(wx.EVT_MENU, self.show_settings, subitem)
         subitem = submenu.Append(
             -1,
             "&Editors\tCtrl-E",
@@ -324,8 +420,8 @@ class HvFrame(wx.Frame):
         self.fileList.InsertColumn(2, 'Date')
         self.fileList.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelectFileList)
         self.splitterH.SplitHorizontally(self.dirList, self.fileList, 250)
-        self.imagePanel = HvImage(self.splitterV)
-        self.splitterV.SplitVertically(self.splitterH, self.imagePanel, 250)
+        self.image = HvImage(self.splitterV)
+        self.splitterV.SplitVertically(self.splitterH, self.image, 250)
         self.CreateStatusBar()
         self.SetStatusText("/hv/")
 
@@ -347,7 +443,30 @@ class HvFrame(wx.Frame):
         self.SetTitle("%(d)s - /hv/" % {'d': os.getcwd()})
 
     def display_file(self, filename):
-        self.imagePanel.display_file(filename)
+        self.image.display_file(filename)
+
+    def get_configuration(self):
+        configuration = {}
+        configuration['window'] = {}
+        (x, y) = self.GetPosition()
+        configuration['window']['x'] = "%(x)d" % {'x': x}
+        configuration['window']['y'] = "%(y)d" % {'y': y}
+        (w, h) = self.GetSize()
+        configuration['window']['w'] = "%(w)d" % {'w': w}
+        configuration['window']['h'] = "%(h)d" % {'h': h}
+        configuration['browser'] = {}
+        configuration['browser']['lastdir'] = os.getcwd()
+        # r = self.sv1.get_allocation()
+        # configuration['browser']['w'] = "%(w)d" % {'w': r.width}
+        # configuration['browser']['h'] = "%(h)d" % {'h': r.height}
+        configuration['settings'] = self.settings
+        configuration['editors'] = {}
+        for i in range(len(self.editors)):
+            (name, command) = self.editors[i]
+            if name and command:
+                configuration['editors']['name%(n)d' % {'n': i}] = name
+                configuration['editors']['command%(n)d' % {'n': i}] = command
+        return configuration
 
     def OnSelectFileList(self, event):
         item = event.GetItem()
@@ -369,6 +488,7 @@ class HvFrame(wx.Frame):
         e.Destroy()
 
     def OnExit(self, event):
+        hvcommon.saveconfig(self.get_configuration())
         self.Close(True)
 
     def OnAbout(self, event):
@@ -380,10 +500,21 @@ class HvFrame(wx.Frame):
         ab.ShowModal()
         ab.Destroy()
 
-    def OnPreferences(self, event):
-        hvPrefs = HvPreferences(self)
-        hvPrefs.ShowModal()
-        hvPrefs.Destroy()
+    def show_settings(self, event):
+        s = HSettings(self)
+        s.set_config(self.settings)
+        r = s.ShowModal()
+        if r == wx.ID_OK:
+            self.settings = s.get_config()
+            self.masks = []
+            if 'filemasks' in self.settings:
+                if self.settings['filemasks']:
+                    for mask in self.settings['filemasks'].split("|"):
+                        if mask:
+                            self.masks.append(mask)
+            self.read_dir()
+            self.image.display()
+        s.Destroy()
 
     def set_configuration(self, configuration={}, chdir=False):
         try:
@@ -465,9 +596,9 @@ if __name__ == "__main__":
         so = sys.argv[1]
     except IndexError:
         so = None
-    hvApp = wx.App()
-    hvFrame = HvFrame(so)
-    hvFrame.read_dir()
+    app = wx.App()
+    hw = HWindow(so)
+    hw.read_dir()
 
-    hvFrame.Show()
-    hvApp.MainLoop()
+    hw.Show()
+    app.MainLoop()
