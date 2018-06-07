@@ -2,8 +2,8 @@
 
 import wx
 import os
-import sys
 import hvcommon
+import sys
 
 
 class HvImage(wx.Panel):
@@ -11,13 +11,31 @@ class HvImage(wx.Panel):
         wx.Panel.__init__(
             self,
             parent,
-            style=wx.SUNKEN_BORDER)
+            style=wx.SUNKEN_BORDER | wx.NO_FULL_REPAINT_ON_RESIZE)
+        self.front = None
+        self.back = None
         self.Bind(wx.EVT_PAINT, self.OnPaintEvent)
+        self.Bind(wx.EVT_SIZE, self.OnSizeEvent)
         self.image = None
-        self.background = hvcommon.BACKGROUND_CHECKERED
+        self.background = hvcommon.BACKGROUND_NONE
         self.centered = True
         self.shrink = False
         self.zoom = False
+        self.Bind(wx.EVT_ERASE_BACKGROUND, self.disable_event)
+        self.OnSizeEvent(None)
+
+    def flip(self):
+        self.front, self.back = self.back, self.front
+        self.Refresh()
+
+    def update(self):
+        dc = wx.MemoryDC()
+        dc.SelectObject(self.back)
+        self.render(dc)
+        self.flip()
+
+    def disable_event(*args, **kwargs):
+        pass
 
     def display_file(self, filename):
         self.image = wx.Image()
@@ -27,20 +45,27 @@ class HvImage(wx.Panel):
             self.image = None
         self.display()
 
+    def set_background(self, background):
+        self.background = background
+
     def render(self, dc):
         if self.image:
             imageSize = self.image.GetSize()
             panelSize = self.GetSize()
             if self.background == hvcommon.BACKGROUND_NONE:
                 dc.Clear()
+                self.Refresh()
             elif self.background == hvcommon.BACKGROUND_WHITE:
+                dc.SetBackground(wx.Brush(wx.Colour(255, 255, 255)))
                 dc.Clear()
-                dc.FloodFill(0, 0, wx.Colour(255, 255, 255), wx.FLOOD_SURFACE)
+                self.Refresh()
             elif self.background == hvcommon.BACKGROUND_BLACK:
+                dc.SetBackground(wx.Brush(wx.Colour(0, 0, 0)))
                 dc.Clear()
-                dc.FloodFill(1, 1, wx.Colour(0, 0, 0), wx.FLOOD_SURFACE)
+                self.Refresh()
             elif self.background == hvcommon.BACKGROUND_CHECKERED:
-                dc.Clear()  # Temporary, until better solution found
+                dc.Clear()  # Tempo rary, until better solution found
+                self.Refresh()
                 # chkbmp = wx.BitmapFromXPMData(hvcommon.checkers)
                 # tx = panelSize.width / 100
                 # ty = panelSize.height / 100
@@ -65,17 +90,27 @@ class HvImage(wx.Panel):
             else:
                 x = 0
                 y = 0
+            dc.SetBrush(wx.Brush(wx.Colour(255, 255, 255)))
+            dc.SetBackground(wx.Brush(wx.Colour(255, 255, 255)))
+            dc.DrawRectangle(30, 30, 450, 300)
             dc.DrawBitmap(wx.Bitmap(self.image), x, y, False)
         else:
             dc.Clear()
 
     def display(self):
-        dc = wx.ClientDC(self)
-        self.render(dc)
+        self.OnPaintEvent(None)
+
+    def OnSizeEvent(self, event):
+        width, height = self.GetSizeTuple()
+        width = width if width > 0 else 1
+        height = height if height > 0 else 1
+        self.front = wx.Bitmap(width, height)
+        self.back = wx.Bitmap(width, height)
+        self.update()
 
     def OnPaintEvent(self, event):
-        dc = wx.ClientDC(self)
-        self.render(dc)
+        self.OnSizeEvent(None)
+#        dc = wx.BufferedPaintDC(self, self.front)
 
 
 class HEditors(wx.Dialog):
@@ -524,6 +559,8 @@ class HWindow(wx.Frame):
                     for mask in self.settings['filemasks'].split("|"):
                         if mask:
                             self.masks.append(mask)
+            if 'background' in self.settings:
+                self.image.set_background(self.settings['background'])
             self.read_dir()
             self.image.display()
         s.Destroy()
@@ -568,6 +605,8 @@ class HWindow(wx.Frame):
         else:
             self.editors = []
         self.update_editors()
+        if 'background' in self.settings:
+            self.image.set_background(self.settings['background'])
 
     def update_editors(self):
         pass
@@ -580,12 +619,20 @@ class HWindow(wx.Frame):
         self.fileList.DeleteAllItems()
         self.dirList.DeleteAllItems()
 
-        masks = self.masks if self.settings['usemask'] else []
+        masks = []
+        if 'settings' in self.settings:
+            masks = self.settings['usemask']
         for f in hvcommon.getfiles(".", masks):
-            self.fileList.Append((f[0], f[2], f[1]))
+            try:
+                self.fileList.Append((f[0], f[2], f[1]))
+            except UnicodeDecodeError:
+                pass
 
         for d in hvcommon.getdirs_full():
-            self.dirList.Append((d[0], d[1], d[2]))
+            try:
+                self.dirList.Append((d[0], d[1], d[2]))
+            except UnicodeDecoreError:
+                pass
 
         for drive in hvcommon.get_drives():
             self.dirList.Append((
