@@ -3,7 +3,7 @@
 import os
 import fnmatch
 import datetime
-import ConfigParser
+import configparser
 
 have_windows = False
 
@@ -99,7 +99,7 @@ def get_drives():
     drives = []
     if have_windows:
         bitmask = windll.kernel32.GetLogicalDrives()
-        for letter in string.uppercase:
+        for letter in string.ascii_uppercase:
             if bitmask & 1:
                 drives.append(letter)
             bitmask >>= 1
@@ -153,11 +153,14 @@ def getdirs(curdir="."):
 
 def saveconfig(configuration={}):
     fh = open(os.path.join(os.path.expanduser("~"), ".hvrc"), "w")
-    cp = ConfigParser.ConfigParser()
+    cp = configparser.ConfigParser()
     for key in configuration:
         cp.add_section(key)
         for subkey in configuration[key]:
-            cp.set(key, subkey, configuration[key][subkey])
+            try:
+                cp.set(key, subkey, configuration[key][subkey])
+            except TypeError:
+                cp.set(key, subkey, "1" if configuration[key][subkey] else "0")
     cp.write(fh)
     fh.close()
 
@@ -166,7 +169,7 @@ def readconfig():
     configuration = {}
     try:
         fh = open(os.path.join(os.path.expanduser("~"), ".hvrc"))
-        cp = ConfigParser.ConfigParser()
+        cp = configparser.ConfigParser()
         cp.readfp(fh)
         for section in cp.sections():
             configuration[section] = {}
@@ -182,6 +185,8 @@ def readconfig():
         for key in ['centered', 'aspect', 'maximize', 'shrink']:
             try:
                 if configuration['settings'][key] == 'True':
+                    configuration['settings'][key] = True
+                elif configuration['settings'][key] == '1':
                     configuration['settings'][key] = True
                 else:
                     configuration['settings'][key] = False

@@ -1,7 +1,18 @@
 #!/usr/bin/env python
 
-import gtk
-import gobject
+import gi
+gi.require_version('Gtk', '3.0')
+gi.require_version('Gdk', '3.0')
+gi.require_version('GdkPixbuf', '2.0')
+gi.require_version('GObject', '2.0')
+gi.require_version('GLib', '2.0')
+
+from gi.repository import Gtk
+from gi.repository import Gdk
+from gi.repository import GdkPixbuf
+from gi.repository import GObject
+from gi.repository import GLib
+
 import mimetypes
 import os
 import sys
@@ -27,24 +38,24 @@ def read_generic_image(filename):
         fh = open(filename, "rb")
         data = fh.read()
         fh.close()
-        loader = gtk.gdk.PixbufLoader()
+        loader = GdkPixbuf.PixbufLoader()
         if loader.write(data):
             pixbuf = loader.get_pixbuf()
             loader.close()
             return pixbuf
     except IOError:
         pass
-    except glib.GError:
+    except GLib.Error:
         pass
     return None
 
 
 def read_xpm_pixbuf(filename):
     try:
-        return gtk.gdk.pixbuf_new_from_file(filename)
+        return GdkPixbuf.pixbuf_new_from_file(filename)
     except IOError:
         pass
-    except glib.GError:
+    except GLib.Error:
         pass
     return None
 
@@ -54,14 +65,16 @@ def read_pillow_file(filename):
         im = PIL.Image.open(filename)
         data = numpy.array(im)
         w, h = im.size
-        pix = gtk.gdk.pixbuf_new_from_array(
+        pix = GdkPixbuf.pixbuf_new_from_array(
             data,
-            gtk.gdk.COLORSPACE_RGB,
+            GdkPixbuf.Colorspace.RGB,
             8)
         return pix
     except NameError:
         pass
     except IOError:
+        pass
+    except GLib.Error:
         pass
     return None
 
@@ -73,9 +86,9 @@ def read_idraw_pillow(filename):
         fh = zf.open(tn)
         im = PIL.Image.open(fh)
         data = numpy.array(im)
-        pix = gtk.gdk.pixbuf_new_from_array(
+        pix = GdkPixbuf.pixbuf_new_from_array(
             data,
-            gtk.gdk.COLORSPACE_RGB,
+            GdkPixbuf.Colorspace.RGB,
             8)
         fh.close()
         return pix
@@ -87,6 +100,8 @@ def read_idraw_pillow(filename):
         pass
     except IOError:
         pass
+    except GLib.Error:
+        pass
     return None
 
 
@@ -95,14 +110,14 @@ def read_jpeg_pixbuf(filename):
     data = fh.read()
     fh.close()
     try:
-        loader = gtk.gdk.PixbufLoader()
+        loader = GdkPixbuf.PixbufLoader()
         if loader.write(data):
             pixbuf = loader.get_pixbuf()
             loader.close()
             return pixbuf
-    except glib.GError:
-        pass
     except IOError:
+        pass
+    except GLib.Error:
         pass
     return None
 
@@ -119,15 +134,15 @@ def read_idraw_pixbuf(filename):
         zf = zipfile.ZipFile(filename)
         tn = "Thumbnails/Preview.jpg"
         data = zf.read(tn)
-        loader = gtk.gdk.PixbufLoader()
+        loader = GdkPixbuf.PixbufLoader()
         if loader.write(data):
             pixbuf = loader.get_pixbuf()
             loader.close()
             if not pixbuf:
                 data = numpy.array(data)
-                pixbuf = gtk.gdk.pixbuf_new_from_array(
+                pixbuf = GdkPixbuf.pixbuf_new_from_array(
                     data,
-                    gtk.gdk.COLORSPACE_RGB,
+                    GdkPixbuf.Colorspace.RGB,
                     8)
             return pixbuf
     except KeyError:
@@ -137,6 +152,8 @@ def read_idraw_pixbuf(filename):
     except TypeError:
         pass
     except IOError:
+        pass
+    except GLib.Error:
         pass
     return None
 
@@ -157,9 +174,9 @@ def read_svg_file(filename):
         pass
     except OSError:
         pass
-    except glib.GError:
-        pass
     except NameError:
+        pass
+    except GLib.Error:
         pass
     return None
 
@@ -188,36 +205,36 @@ def read_image(filename):
         return read_generic_image(filename)
 
 
-class HEditors(gtk.Dialog):
+class HEditors(Gtk.Dialog):
 
-    def __init__(self):
-        gtk.Dialog.__init__(self,
+    def __init__(self, parent):
+        Gtk.Dialog.__init__(self,
                             "Editors",
-                            None,
-                            gtk.DIALOG_MODAL,
-                            (gtk.STOCK_CANCEL,
-                             gtk.RESPONSE_REJECT,
-                             gtk.STOCK_OK,
-                             gtk.RESPONSE_ACCEPT))
+                            parent,
+                            Gtk.DialogFlags.MODAL,
+                            (Gtk.STOCK_CANCEL,
+                             Gtk.ResponseType.REJECT,
+                             Gtk.STOCK_OK,
+                             Gtk.ResponseType.ACCEPT))
         self.editors = []
         self.names = []
         self.commands = []
-        frame = gtk.Frame(label="Available editors")
-        self.vbox.pack_start(frame)
-        table = gtk.Table(10, 6)
+        frame = Gtk.Frame(label="Available editors")
+        self.vbox.pack_start(frame, True, True, 3)
+        table = Gtk.Table(10, 6)
         frame.add(table)
         for i in range(10):
-            label = gtk.Label("Label: ")
+            label = Gtk.Label("Label: ")
             table.attach(label, 0, 1, i, i+1)
-            entry = gtk.Entry()
+            entry = Gtk.Entry()
             self.names.append(entry)
             table.attach(entry, 1, 2, i, i+1)
-            label = gtk.Label("Command: ")
+            label = Gtk.Label("Command: ")
             table.attach(label, 2, 3, i, i+1)
-            entry = gtk.Entry()
+            entry = Gtk.Entry()
             self.commands.append(entry)
             table.attach(entry, 3, 5, i, i+1)
-            button = gtk.Button("...")
+            button = Gtk.Button("...")
             button.connect('clicked', self.click_browse, i)
             table.attach(button, 5, 6, i, i+1)
         self.show_all()
@@ -239,72 +256,77 @@ class HEditors(gtk.Dialog):
         return editors
 
     def click_browse(self, widget, data=None):
-        dlg = gtk.FileChooserDialog(
+        dlg = Gtk.FileChooserDialog(
             "Find a program",
-            None,
-            gtk.DIALOG_MODAL | gtk.FILE_CHOOSER_ACTION_OPEN,
-            (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-             gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+            self,
+            Gtk.DialogFlags.MODAL | Gtk.FileChooserAction.OPEN,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
         response = dlg.run()
-        if response == gtk.RESPONSE_OK:
+        if response == Gtk.ResponseType.OK:
             self.commands[data].set_text(dlg.get_filename())
         dlg.destroy()
 
 
-class HSettings(gtk.Dialog):
+class HSettings(Gtk.Dialog):
 
-    def __init__(self):
-        gtk.Dialog.__init__(self,
+    def __init__(self, parent):
+        Gtk.Dialog.__init__(self,
                             "Preferences",
-                            None,
-                            gtk.DIALOG_MODAL,
-                            (gtk.STOCK_CANCEL,
-                             gtk.RESPONSE_REJECT,
-                             gtk.STOCK_OK,
-                             gtk.RESPONSE_ACCEPT))
-        frame = gtk.Frame(label="Accepted file masks")
-        self.vbox.pack_start(frame)
-        vbox = gtk.VBox()
+                            parent,
+                            Gtk.DialogFlags.MODAL,
+                            (Gtk.STOCK_CANCEL,
+                             Gtk.ResponseType.REJECT,
+                             Gtk.STOCK_OK,
+                             Gtk.ResponseType.ACCEPT))
+        frame = Gtk.Frame(label="Accepted file masks")
+        self.vbox.pack_start(frame, True, True, 3)
+        vbox = Gtk.VBox()
         frame.add(vbox)
-        self.masks = gtk.CheckButton("Accept following file masks:")
+        self.masks = Gtk.CheckButton("Accept following file masks:")
         self.masks.connect("toggled", self.toggle_filemasks)
-        vbox.pack_start(self.masks)
-        self.entry = gtk.Entry()
+        vbox.pack_start(self.masks, True, False, 1)
+        self.entry = Gtk.Entry()
         self.entry.set_text(hvcommon.DEFAULT_MASKS)
         self.entry.set_sensitive(False)
-        vbox.pack_start(self.entry)
-        hbox = gtk.HBox()
-        self.vbox.pack_start(hbox)
-        vbox1 = gtk.VBox()
-        hbox.pack_start(vbox1)
-        frame = gtk.Frame(label="Background")
-        vbox1.pack_start(frame)
-        vbox = gtk.VBox()
+        vbox.pack_start(self.entry, True, True, 1)
+        hbox = Gtk.HBox()
+        self.vbox.pack_start(hbox, True, True, 1)
+        vbox1 = Gtk.VBox()
+        hbox.pack_start(vbox1, True, True, 1)
+        frame = Gtk.Frame(label="Background")
+        vbox1.pack_start(frame, True, True, 3)
+        vbox = Gtk.VBox()
         frame.add(vbox)
-        self.radio1 = gtk.RadioButton(None, "None")
-        vbox.pack_start(self.radio1)
-        self.radio2 = gtk.RadioButton(self.radio1, "White")
-        vbox.pack_start(self.radio2)
-        self.radio3 = gtk.RadioButton(self.radio1, "Black")
-        vbox.pack_start(self.radio3)
-        self.radio4 = gtk.RadioButton(self.radio1, "Checkered")
-        vbox.pack_start(self.radio4)
-        vbox1 = gtk.VBox()
-        hbox.pack_start(vbox1)
-        frame = gtk.Frame("Settings")
-        vbox1.pack_start(frame)
-        vbox = gtk.VBox()
+        self.radio1 = Gtk.RadioButton.new_with_label_from_widget(None, "None")
+        vbox.pack_start(self.radio1, False, False, 1)
+        self.radio2 = Gtk.RadioButton.new_with_label_from_widget(
+            self.radio1,
+            "White")
+        vbox.pack_start(self.radio2, False, False, 1)
+        self.radio3 = Gtk.RadioButton.new_with_label_from_widget(
+            self.radio1,
+            "Black")
+        vbox.pack_start(self.radio3, False, False, 1)
+        self.radio4 = Gtk.RadioButton.new_with_label_from_widget(
+            self.radio1,
+            "Checkered")
+        vbox.pack_start(self.radio4, False, False, 1)
+        vbox1 = Gtk.VBox()
+        hbox.pack_start(vbox1, True, True, 1)
+        frame = Gtk.Frame(label="Settings")
+        vbox1.pack_start(frame, True, True, 1)
+        vbox = Gtk.VBox()
         frame.add(vbox)
-        self.centered = gtk.CheckButton("Centered")
-        vbox.pack_start(self.centered)
-        self.aspect = gtk.CheckButton("Keep aspect ratio")
-        vbox.pack_start(self.aspect)
-        self.maximize = gtk.CheckButton("Zoom to fit")
-        vbox.pack_start(self.maximize)
-        self.shrink = gtk.CheckButton("Shrink to fit")
-        vbox.pack_start(self.shrink)
+        self.centered = Gtk.CheckButton("Centered")
+        vbox.pack_start(self.centered, False, False, 1)
+        self.aspect = Gtk.CheckButton("Keep aspect ratio")
+        vbox.pack_start(self.aspect, False, False, 1)
+        self.maximize = Gtk.CheckButton("Zoom to fit")
+        vbox.pack_start(self.maximize, False, False, 1)
+        self.shrink = Gtk.CheckButton("Shrink to fit")
+        vbox.pack_start(self.shrink, False, False, 1)
         self.set_title("Preferences")
-        self.set_has_separator(True)
         self.set_size_request(640, 256)
         self.show_all()
 
@@ -396,7 +418,7 @@ class HSettings(gtk.Dialog):
             self.editors = config['editors']
 
 
-class HWindow(gtk.Window):
+class HWindow(Gtk.ApplicationWindow):
 
     def get_configuration(self):
         configuration = {}
@@ -465,11 +487,11 @@ class HWindow(gtk.Window):
             try:
                 subprocess.Popen([data, self.current])
             except OSError as oe:
-                ed = gtk.MessageDialog(
+                ed = Gtk.MessageDialog(
                     self,
-                    gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-                    gtk.MESSAGE_ERROR,
-                    gtk.BUTTONS_CLOSE,
+                    Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                    Gtk.MessageType.ERROR,
+                    Gtk.ButtonsType.CLOSE,
                     "Error launching editor %(ed)s: %(er)s" %
                     {'ed': data, 'er': str(oe)})
                 ed.set_title("Error")
@@ -480,7 +502,8 @@ class HWindow(gtk.Window):
         for item in self.editors_submenu:
             self.editors_submenu.remove(item)
         for name, command in self.editors:
-            menu_item = gtk.MenuItem(name)
+            menu_item = Gtk.MenuItem(name)
+            menu_item.set_property('use-underline', True)
             menu_item.connect('activate', self.click_open_with, command)
             self.editors_submenu.append(menu_item)
 
@@ -513,7 +536,8 @@ class HWindow(gtk.Window):
         self.masks = []
         self.editors = []
         self.current = None
-        gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
+        Gtk.ApplicationWindow.__init__(self)
+        self.set_property("show-menubar", True)
         self.connect("destroy", self.quit)
         self.origin = None
         self.picture = None
@@ -521,7 +545,7 @@ class HWindow(gtk.Window):
 
     def quit(self, data=None):
         hvcommon.saveconfig(self.get_configuration())
-        gtk.main_quit()
+        Gtk.main_quit()
 
     def dir_activated(self, treeview, path, column, user_data=None):
         sel = treeview.get_selection()
@@ -557,7 +581,7 @@ class HWindow(gtk.Window):
         else:
             self.picture = None
             self.origin = None
-        self.statusbar.push(0, status)
+        self.statusbar.push(self.context_id, status)
         self.current = filename
         self.rotate = 0
         self.flip_x = 0
@@ -601,6 +625,13 @@ class HWindow(gtk.Window):
         else:
             centered = True
 
+        # Some default settings:
+        if not 'aspect' in self.settings:
+            self.settings['aspect'] = True
+        if not 'shrink' in self.settings:
+            self.settings['shrink'] = False
+        if not 'maximize' in self.settings:
+            self.settings['maximize'] = False
         self.picture = self.origin
         if self.picture:
             self.image.set_size_request(1, 1)
@@ -652,24 +683,29 @@ class HWindow(gtk.Window):
                 ph)
             if bigger and not zoom and not shrink:
                 self.sv3.set_policy(
-                    gtk.POLICY_AUTOMATIC,
-                    gtk.POLICY_AUTOMATIC)
+                    Gtk.PolicyType.AUTOMATIC,
+                    Gtk.PolicyType.AUTOMATIC)
             else:
-                self.sv3.set_policy(gtk.POLICY_NEVER, gtk.POLICY_NEVER)
-            pb = gtk.gdk.Pixbuf(
-                gtk.gdk.COLORSPACE_RGB,
+                self.sv3.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
+            pb = GdkPixbuf.Pixbuf.new(
+                GdkPixbuf.Colorspace.RGB,
                 True,
                 8,
                 w,
                 h)
-            draw = self.image.get_window()
-            colormap = draw.get_colormap()
-            pi = gtk.gdk.Pixmap(draw, w, h, -1)
-            pi.set_colormap(colormap)
+            screen = self.get_screen()
+            visual = screen.get_rgba_visual()
+            if not visual:
+                visual = screen.get_system_visual()
+            # draw = self.image.get_window()
+            # colormap = draw.get_colormap()
+            pi = Gdk.Pixmap(draw, w, h, -1)
+            pi.set_visual(visual)
+            # pi.set_colormap(colormap)
             self.image.clear()
             if background == hvcommon.BACKGROUND_NONE:
                 style = self.get_style()
-                style = style.bg[gtk.STATE_NORMAL]
+                style = style.bg[Gtk.STATE_NORMAL]
                 red = style.red / 256
                 green = style.green / 256
                 blue = style.blue / 256
@@ -681,7 +717,7 @@ class HWindow(gtk.Window):
             elif background == hvcommon.BACKGROUND_BLACK:
                 pb.fill(0x000000ff)
             elif background == hvcommon.BACKGROUND_CHECKERED:
-                chk = gtk.gdk.pixbuf_new_from_xpm_data(hvcommon.checkers)
+                chk = GdkPixbuf.pixbuf_new_from_xpm_data(hvcommon.checkers)
                 tx = w / 100
                 ty = h / 100
                 if w % 100 > 0:
@@ -699,7 +735,7 @@ class HWindow(gtk.Window):
             pi.draw_pixbuf(
                 None,
                 pb, 0, 0, 0, 0, w, h,
-                gtk.gdk.RGB_DITHER_NORMAL, 0, 0)
+                Gdk.RGB_DITHER_NORMAL, 0, 0)
 
             if centered:
                 (x, y) = hvcommon.get_location(w, h, pw, ph)
@@ -708,32 +744,32 @@ class HWindow(gtk.Window):
                 y = 0
             if zoom or shrink:
                 self.picture = self.picture.scale_simple(
-                    pw, ph, gtk.gdk.INTERP_BILINEAR)
+                    pw, ph, Gdk.INTERP_BILINEAR)
             pi.draw_pixbuf(
                 None,
                 self.picture,
                 0, 0, x, y, pw, ph,
-                gtk.gdk.RGB_DITHER_NORMAL, 0, 0)
+                Gdk.RGB_DITHER_NORMAL, 0, 0)
             self.image.set_size_request(w, h)
             self.image.set_from_pixmap(pi, None)
         else:
             self.image.set_from_stock(
-                gtk.STOCK_MISSING_IMAGE,
-                gtk.ICON_SIZE_LARGE_TOOLBAR)
+                Gtk.STOCK_MISSING_IMAGE,
+                Gtk.IconSize.LARGE_TOOLBAR)
 
     def popup_image(self, widget, event, unused):
         if unused.get_visible():
             unused.hide()
         else:
-            if event.type == gtk.gdk.BUTTON_PRESS:
-                if event.button == 3:
-                    unused.show_all()
-                    unused.popup(
-                        None,
-                        None,
-                        None,
-                        event.button,
-                        event.time)
+            if event.button == 3:
+                unused.show_all()
+                unused.popup(
+                    None,
+                    None,
+                    None,
+                    None,
+                    event.button,
+                    event.time)
 
     def file_changed(self, selection):
         (model, iter) = selection.get_selected()
@@ -743,10 +779,10 @@ class HWindow(gtk.Window):
             self.display_file(fulln)
 
     def show_settings(self, data=None):
-        s_window = HSettings()
+        s_window = HSettings(self)
         s_window.set_config(self.settings)
         response = s_window.run()
-        if response == gtk.RESPONSE_ACCEPT:
+        if response == Gtk.ResponseType.ACCEPT:
             self.settings = s_window.get_config()
             self.masks = []
             if 'filemasks' in self.settings:
@@ -758,22 +794,25 @@ class HWindow(gtk.Window):
             self.display()
         s_window.destroy()
 
+    def about_onclose(self, action, parameter):
+        action.destroy()
+
     def show_about(self, data=None):
-        ab = gtk.MessageDialog(
-            self,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_INFO,
-            gtk.BUTTONS_CLOSE,
-            "hv\nPYGTK image viewer\n(C) Marcin Bielewicz, 2017-?")
+        ab = Gtk.AboutDialog()
+        ab.set_program_name("hv")
+        ab.set_copyright("Copyright \xc2\xa9 2017-? Marcin Bielewicz")
+        ab.set_authors(["Marcin Bielewicz"])
+        ab.set_website("https://github.com/lvajxi03/hv")
+        ab.set_website_label("hv website")
         ab.set_title("About hv")
-        ab.run()
-        ab.destroy()
+        ab.connect("response", self.about_onclose)
+        ab.show()
 
     def show_editors(self, data=None):
-        e_window = HEditors()
+        e_window = HEditors(self)
         e_window.set_editors(self.editors)
         response = e_window.run()
-        if response == gtk.RESPONSE_ACCEPT:
+        if response == Gtk.ResponseType.ACCEPT:
             self.editors = e_window.get_editors()
             self.update_editors()
         e_window.destroy()
@@ -792,131 +831,150 @@ class HWindow(gtk.Window):
 
     def create_ui(self, startupobj=""):
 
-        self.imagemenu = gtk.Menu()
-        menu_item = gtk.MenuItem("Flip _horizontally")
+        self.imagemenu = Gtk.Menu()
+        menu_item = Gtk.MenuItem("Flip _horizontally")
+        menu_item.set_property('use-underline', True)
         menu_item.connect('activate', self.click_flip_horiz)
         self.imagemenu.append(menu_item)
-        menu_item = gtk.MenuItem("Flip _vertically")
+        menu_item = Gtk.MenuItem("Flip _vertically")
+        menu_item.set_property('use-underline', True)
         menu_item.connect('activate', self.click_flip_vert)
         self.imagemenu.append(menu_item)
-        menu_item = gtk.MenuItem("Rotate _clockwise")
+        menu_item = Gtk.MenuItem("Rotate _clockwise")
+        menu_item.set_property('use-underline', True)
         menu_item.connect('activate', self.click_rotate_cl)
         self.imagemenu.append(menu_item)
-        menu_item = gtk.MenuItem("Rotate c_ounter-clockwise")
+        menu_item = Gtk.MenuItem("Rotate c_ounter-clockwise")
+        menu_item.set_property('use-underline', True)
         menu_item.connect('activate', self.click_rotate_cc)
         self.imagemenu.append(menu_item)
-        self.imagemenu.append(gtk.SeparatorMenuItem())
-        menu_item = gtk.MenuItem("Open _with...")
-        self.editors_submenu = gtk.Menu()
+        self.imagemenu.append(Gtk.SeparatorMenuItem())
+        menu_item = Gtk.MenuItem("Open _with...")
+        menu_item.set_property('use-underline', True)
+        self.editors_submenu = Gtk.Menu()
         menu_item.set_submenu(self.editors_submenu)
         self.imagemenu.append(menu_item)
 
-        menu_bar = gtk.MenuBar()
-        menu_item = gtk.MenuItem("h_v")
-        menu = gtk.Menu()
+        menu_bar = Gtk.MenuBar()
+        menu_item = Gtk.MenuItem("h_v")
+        menu_item.set_property('use-underline', True)
+        menu = Gtk.Menu()
         menu_item.set_submenu(menu)
-        menu_subitem = gtk.MenuItem("_Preferences")
+        menu_subitem = Gtk.MenuItem("_Preferences")
+        menu_subitem.set_property('use-underline', True)
         menu_subitem.connect('activate', self.show_settings)
         menu.append(menu_subitem)
-        menu_subitem = gtk.MenuItem("_Editors")
+        menu_subitem = Gtk.MenuItem("_Editors")
+        menu_subitem.set_property('use-underline', True)
         menu_subitem.connect('activate', self.show_editors)
         menu.append(menu_subitem)
-        menu_subitem = gtk.MenuItem("_Quit")
+        menu_subitem = Gtk.MenuItem("_Quit")
+        menu_subitem.set_property('use-underline', True)
         menu_subitem.connect('activate', self.quit)
         menu.append(menu_subitem)
         menu_bar.append(menu_item)
-        menu_item = gtk.MenuItem("_Help")
-        menu = gtk.Menu()
-        menu_subitem = gtk.MenuItem("_About")
+        menu_item = Gtk.MenuItem("_Help")
+        menu_item.set_property('use-underline', True)
+        menu = Gtk.Menu()
+        menu_subitem = Gtk.MenuItem("_About")
+        menu_subitem.set_property('use-underline', True)
         menu_subitem.connect('activate', self.show_about)
         menu.append(menu_subitem)
         menu_item.set_submenu(menu)
         menu_bar.append(menu_item)
-        stock_hi = gtk.Image()
+        stock_hi = Gtk.Image()
         self.drive_icon = stock_hi.render_icon(
-            gtk.STOCK_HARDDISK,
-            gtk.ICON_SIZE_MENU)
-
-        stock_di = gtk.Image()
+            Gtk.STOCK_HARDDISK,
+            Gtk.IconSize.MENU
+        )
+        stock_di = Gtk.Image()
         self.dir_icon = stock_di.render_icon(
-            gtk.STOCK_DIRECTORY,
-            gtk.ICON_SIZE_MENU)
-        dcolumn = gtk.TreeViewColumn("Directory name")
-        dtext_renderer = gtk.CellRendererText()
-        dicon_renderer = gtk.CellRendererPixbuf()
+            Gtk.STOCK_DIRECTORY,
+            Gtk.IconSize.MENU)
+        dcolumn = Gtk.TreeViewColumn("Directory name")
+        dtext_renderer = Gtk.CellRendererText()
+        dicon_renderer = Gtk.CellRendererPixbuf()
         dcolumn.pack_start(dicon_renderer, False)
         dcolumn.pack_start(dtext_renderer, False)
         dcolumn.set_attributes(dtext_renderer, text=1)
         dcolumn.set_attributes(dicon_renderer, pixbuf=0)
 
         self.file_icon = stock_di.render_icon(
-            gtk.STOCK_FILE,
-            gtk.ICON_SIZE_MENU)
+            Gtk.STOCK_FILE,
+            Gtk.IconSize.MENU)
 
-        self.sv1 = gtk.ScrolledWindow()
-        self.sv1.set_usize(150, 150)
-        self.sv1.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.sv1 = Gtk.ScrolledWindow()
+        self.sv1.set_policy(
+            Gtk.PolicyType.AUTOMATIC,
+            Gtk.PolicyType.AUTOMATIC)
 
-        sv2 = gtk.ScrolledWindow()
-        sv2.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sv2 = Gtk.ScrolledWindow()
+        sv2.set_policy(
+            Gtk.PolicyType.AUTOMATIC,
+            Gtk.PolicyType.AUTOMATIC)
 
-        self.dirmodel = gtk.ListStore(gtk.gdk.Pixbuf, gobject.TYPE_STRING)
-        self.filemodel = gtk.ListStore(
-            gtk.gdk.Pixbuf,
-            gobject.TYPE_STRING,
-            gobject.TYPE_STRING,
-            gobject.TYPE_STRING)
+        self.dirmodel = Gtk.ListStore(GdkPixbuf.Pixbuf, GObject.TYPE_STRING)
+        self.filemodel = Gtk.ListStore(
+            GdkPixbuf.Pixbuf,
+            GObject.TYPE_STRING,
+            GObject.TYPE_STRING,
+            GObject.TYPE_STRING)
 
-        fcolumn = gtk.TreeViewColumn("Filename")
-        ftext_renderer = gtk.CellRendererText()
-        ficon_renderer = gtk.CellRendererPixbuf()
+        fcolumn = Gtk.TreeViewColumn("Filename")
+        ftext_renderer = Gtk.CellRendererText()
+        ficon_renderer = Gtk.CellRendererPixbuf()
         fcolumn.pack_start(ficon_renderer, False)
         fcolumn.pack_start(ftext_renderer, False)
         fcolumn.set_attributes(ftext_renderer, text=1)
         fcolumn.set_attributes(ficon_renderer, pixbuf=0)
 
-        fcolumn2 = gtk.TreeViewColumn("Size")
-        ftext_renderer2 = gtk.CellRendererText()
+        fcolumn2 = Gtk.TreeViewColumn("Size")
+        ftext_renderer2 = Gtk.CellRendererText()
         fcolumn2.pack_start(ftext_renderer2, False)
         fcolumn2.set_attributes(ftext_renderer2, text=3)
-        fcolumn3 = gtk.TreeViewColumn("Last modified")
-        ftext_renderer3 = gtk.CellRendererText()
+        fcolumn3 = Gtk.TreeViewColumn("Last modified")
+        ftext_renderer3 = Gtk.CellRendererText()
         fcolumn3.pack_start(ftext_renderer3, False)
         fcolumn3.set_attributes(ftext_renderer3, text=2)
 
-        self.dirlist = gtk.TreeView(self.dirmodel)
+        self.dirlist = Gtk.TreeView(self.dirmodel)
         self.dirlist.append_column(dcolumn)
         self.dirlist.connect('row-activated', self.dir_activated, None)
 
-        self.filelist = gtk.TreeView(self.filemodel)
+        self.filelist = Gtk.TreeView(self.filemodel)
         self.filelist.append_column(fcolumn)
         self.filelist.append_column(fcolumn2)
         self.filelist.append_column(fcolumn3)
         self.filelist.connect('row-activated', self.file_activated, None)
 
         dirsel = self.dirlist.get_selection()
-        dirsel.set_mode(gtk.SELECTION_SINGLE)
+        dirsel.set_mode(Gtk.SelectionMode.SINGLE)
         filesel = self.filelist.get_selection()
-        filesel.set_mode(gtk.SELECTION_SINGLE)
+        filesel.set_mode(Gtk.SelectionMode.SINGLE)
         filesel.connect('changed', self.file_changed)
 
         self.sv1.add_with_viewport(self.dirlist)
         sv2.add_with_viewport(self.filelist)
 
-        self.statusbar = gtk.Statusbar()
-        self.statusbar.push(0, "/hv/")
+        self.statusbar = Gtk.Statusbar()
+        self.context_id = self.statusbar.get_context_id("hv-context")
+        self.statusbar.push(self.context_id, "/hv/")
 
-        hpaned = gtk.HPaned()
-        vpaned = gtk.VPaned()
+        hpaned = Gtk.HPaned()
+        hpaned.set_wide_handle(True)
+        hpaned.set_position(150)
+        vpaned = Gtk.VPaned()
+        vpaned.set_wide_handle(True)
+        vpaned.set_position(150)
 
         vpaned.add1(self.sv1)
         vpaned.add2(sv2)
 
         hpaned.add1(vpaned)
-        self.sv3 = gtk.ScrolledWindow()
-        self.sv3.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        self.evb = gtk.EventBox()
-        self.image = gtk.Image()
+        self.sv3 = Gtk.ScrolledWindow()
+        self.sv3.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        self.evb = Gtk.EventBox()
+        self.image = Gtk.Image()
         self.evb.add(self.image)
         self.sv3.add_with_viewport(self.evb)
         hpaned.add2(self.sv3)
@@ -926,7 +984,7 @@ class HWindow(gtk.Window):
             self.popup_image,
             self.imagemenu)
 
-        vbox = gtk.VBox(False, 2)
+        vbox = Gtk.VBox(False, 2)
         vbox.pack_start(menu_bar, False, False, 0)
         vbox.pack_start(hpaned, True, True, 1)
         vbox.pack_start(self.statusbar, False, False, 0)
@@ -963,6 +1021,6 @@ if __name__ == "__main__":
     hw = HWindow(so)
     hw.show()
     try:
-        gtk.main()
+        Gtk.main()
     except KeyboardInterrupt:
         print("Bye!")
