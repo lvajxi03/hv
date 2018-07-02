@@ -183,7 +183,10 @@ def saveconfig(configuration={}):
     for key in configuration:
         cp.add_section(key)
         for subkey in configuration[key]:
-            cp.set(key, subkey, configuration[key][subkey])
+            try:
+                cp.set(key, subkey, configuration[key][subkey])
+            except TypeError:
+                cp.set(key, subkey, "1" if configuration[key][subkey] else "0")
     cp.write(fh)
     fh.close()
 
