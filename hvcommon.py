@@ -3,7 +3,7 @@
 import os
 import fnmatch
 import datetime
-import ConfigParser
+import configparser
 
 have_windows = False
 
@@ -21,7 +21,7 @@ BACKGROUND_NONE = 0
 BACKGROUND_WHITE = 1
 BACKGROUND_BLACK = 2
 BACKGROUND_CHECKERED = 3
-BACKGROUND_CUSTOM = 4
+BACKGROUND_GRID = 4
 
 
 def sizeof_fmt(num, suffix='B'):
@@ -99,7 +99,7 @@ def get_drives():
     drives = []
     if have_windows:
         bitmask = windll.kernel32.GetLogicalDrives()
-        for letter in string.uppercase:
+        for letter in string.ascii_uppercase:
             if bitmask & 1:
                 drives.append(letter)
             bitmask >>= 1
@@ -116,6 +116,7 @@ def getfiles(curdir=".", masks=[]):
                     for mask in masks:
                         if fnmatch.fnmatch(f, mask):
                             names.append(f)
+
         else:
             for f in os.listdir(curdir):
                 if os.path.isfile(f):
@@ -153,7 +154,7 @@ def getdirs(curdir="."):
 
 def saveconfig(configuration={}):
     fh = open(os.path.join(os.path.expanduser("~"), ".hvrc"), "w")
-    cp = ConfigParser.ConfigParser()
+    cp = configparser.ConfigParser()
     for key in configuration:
         cp.add_section(key)
         for subkey in configuration[key]:
@@ -166,7 +167,7 @@ def readconfig():
     configuration = {}
     try:
         fh = open(os.path.join(os.path.expanduser("~"), ".hvrc"))
-        cp = ConfigParser.ConfigParser()
+        cp = configparser.ConfigParser()
         cp.readfp(fh)
         for section in cp.sections():
             configuration[section] = {}
@@ -179,9 +180,11 @@ def readconfig():
         pass
     # Saturday night specials:
     if 'settings' in configuration:
-        for key in ['centered', 'aspect', 'maximize', 'shrink']:
+        for key in ['centered', 'aspect', 'zoom', 'shrink']:
             try:
                 if configuration['settings'][key] == 'True':
+                    configuration['settings'][key] = True
+                elif configuration['settings'][key] == '1':
                     configuration['settings'][key] = True
                 else:
                     configuration['settings'][key] = False
@@ -305,3 +308,44 @@ checkers = [
     "..................................................                                                  ",
     "..................................................                                                  ",
     "..................................................                                                  "]
+
+
+grid = [
+    "34 34 3 1",
+    " 	c None",
+    ".	c #E9E9E9",
+    "+	c #FFFFFF",
+    "..................................",
+    "..................................",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++",
+    "..++++++++++++++++++++++++++++++++"]
