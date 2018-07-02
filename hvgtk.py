@@ -505,6 +505,8 @@ class HWindow(gtk.Window):
                 [self.drive_icon,
                  "%(letter)s:\\" % {'letter': drive}])
 
+        self.update_title()
+
     def __init__(self, startupobj=""):
         self.flip_x = False
         self.flip_y = False
@@ -528,7 +530,6 @@ class HWindow(gtk.Window):
         (model, iter) = sel.get_selected()
         newdir = os.path.join(os.getcwd(), model[iter][1])
         self.read_dir(newdir)
-        self.update_title()
 
     def file_activated(self, treeview, path, column, user_data=None):
         sel = treeview.get_selection()
@@ -947,7 +948,6 @@ class HWindow(gtk.Window):
         else:
             self.set_configuration(hvcommon.readconfig(), True)
             self.read_dir()
-        self.update_title()
         self.connect('size-allocate', self.display)
         self.show_all()
 

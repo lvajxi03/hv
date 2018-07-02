@@ -152,6 +152,31 @@ def getdirs(curdir="."):
     return []
 
 
+def getdirs_full(curdir="."):
+    try:
+        os.chdir(curdir)
+        dirs = []
+        for f in os.listdir(curdir):
+            if os.path.isdir(f):
+                dirs.append(f)
+        dirs.sort()
+        dirs.insert(0, '.')
+        dirs.insert(0, '..')
+
+        full = []
+        for name in dirs:
+            mtime = os.path.getmtime(name)
+            ts = datetime.datetime.fromtimestamp(
+                mtime).strftime('%Y-%m-%d %H:%M:%S')
+            statinfo = os.stat(name)
+            size = sizeof_fmt(statinfo.st_size)
+            full.append([name, ts, size])
+        return full
+    except OSError:
+        pass
+    return []
+
+
 def saveconfig(configuration={}):
     fh = open(os.path.join(os.path.expanduser("~"), ".hvrc"), "w")
     cp = configparser.ConfigParser()
@@ -180,7 +205,7 @@ def readconfig():
         pass
     # Saturday night specials:
     if 'settings' in configuration:
-        for key in ['centered', 'aspect', 'zoom', 'shrink']:
+        for key in ['centered', 'aspect', 'zoom', 'shrink', 'usemask']:
             try:
                 if configuration['settings'][key] == 'True':
                     configuration['settings'][key] = True
