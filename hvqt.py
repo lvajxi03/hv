@@ -3,36 +3,36 @@
 import sys
 import os
 try:
-    from PySide2.QtGui import QStandardItemModel
-    from PySide2.QtGui import QStandardItem
-    from PySide2.QtGui import QPixmap
-    from PySide2.QtGui import QIcon
-    from PySide2.QtGui import QPainter
-    from PySide2.QtGui import QPalette
-    from PySide2.QtWidgets import QApplication
-    from PySide2.QtWidgets import QMainWindow
-    from PySide2.QtWidgets import QWidget
-    from PySide2.QtWidgets import QHBoxLayout
-    from PySide2.QtWidgets import QSplitter
-    from PySide2.QtWidgets import QLabel
-    from PySide2.QtWidgets import QTreeView
-    from PySide2.QtWidgets import QAction
-    from PySide2.QtWidgets import QMenu
-    from PySide2.QtWidgets import QAbstractItemView
-    from PySide2.QtWidgets import QScrollArea
-    from PySide2.QtWidgets import QMessageBox
-    from PySide2.QtWidgets import QDialog
-    from PySide2.QtWidgets import QFrame
-    from PySide2.QtWidgets import QVBoxLayout
-    from PySide2.QtWidgets import QGroupBox
-    from PySide2.QtWidgets import QRadioButton
-    from PySide2.QtWidgets import QCheckBox
-    from PySide2.QtWidgets import QLineEdit
-    from PySide2.QtWidgets import QDialogButtonBox
+    from PySide6.QtGui import QStandardItemModel
+    from PySide6.QtGui import QStandardItem
+    from PySide6.QtGui import QPixmap
+    from PySide6.QtGui import QIcon
+    from PySide6.QtGui import QPainter
+    from PySide6.QtGui import QPalette
+    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QMainWindow
+    from PySide6.QtWidgets import QWidget
+    from PySide6.QtWidgets import QHBoxLayout
+    from PySide6.QtWidgets import QSplitter
+    from PySide6.QtWidgets import QLabel
+    from PySide6.QtWidgets import QTreeView
+    from PySide6.QtGui import QAction
+    from PySide6.QtWidgets import QMenu
+    from PySide6.QtWidgets import QAbstractItemView
+    from PySide6.QtWidgets import QScrollArea
+    from PySide6.QtWidgets import QMessageBox
+    from PySide6.QtWidgets import QDialog
+    from PySide6.QtWidgets import QFrame
+    from PySide6.QtWidgets import QVBoxLayout
+    from PySide6.QtWidgets import QGroupBox
+    from PySide6.QtWidgets import QRadioButton
+    from PySide6.QtWidgets import QCheckBox
+    from PySide6.QtWidgets import QLineEdit
+    from PySide6.QtWidgets import QDialogButtonBox
 
-    from PySide2 import QtSvg
-    from PySide2.QtCore import Qt
-    from PySide2.QtCore import QObject
+    from PySide6 import QtSvg
+    from PySide6.QtCore import Qt
+    from PySide6.QtCore import QObject
 except ImportError:
     from PyQt5.QtGui import QStandardItemModel
     from PyQt5.QtGui import QStandardItem
@@ -317,7 +317,7 @@ class HWindow(QMainWindow):
 
         self.scroll = HScrollArea()
         self.image = HImage(self.scroll)
-        self.image.defaultbg = self.palette().color(QPalette.Background)
+        self.image.defaultbg = self.palette().color(QPalette.Window)
         self.image.setContextMenuPolicy(Qt.CustomContextMenu)
         self.image.customContextMenuRequested.connect(self.popup_image_menu)
         self.image.setAlignment(Qt.AlignCenter)
