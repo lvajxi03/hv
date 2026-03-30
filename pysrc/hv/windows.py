@@ -2,69 +2,40 @@
 
 import sys
 import os
-try:
-    from PySide6.QtGui import QStandardItemModel
-    from PySide6.QtGui import QStandardItem
-    from PySide6.QtGui import QPixmap
-    from PySide6.QtGui import QIcon
-    from PySide6.QtGui import QPainter
-    from PySide6.QtGui import QPalette
-    from PySide6.QtWidgets import QApplication
-    from PySide6.QtWidgets import QMainWindow
-    from PySide6.QtWidgets import QWidget
-    from PySide6.QtWidgets import QHBoxLayout
-    from PySide6.QtWidgets import QSplitter
-    from PySide6.QtWidgets import QLabel
-    from PySide6.QtWidgets import QTreeView
-    from PySide6.QtGui import QAction
-    from PySide6.QtWidgets import QMenu
-    from PySide6.QtWidgets import QAbstractItemView
-    from PySide6.QtWidgets import QScrollArea
-    from PySide6.QtWidgets import QMessageBox
-    from PySide6.QtWidgets import QDialog
-    from PySide6.QtWidgets import QFrame
-    from PySide6.QtWidgets import QVBoxLayout
-    from PySide6.QtWidgets import QGroupBox
-    from PySide6.QtWidgets import QRadioButton
-    from PySide6.QtWidgets import QCheckBox
-    from PySide6.QtWidgets import QLineEdit
-    from PySide6.QtWidgets import QDialogButtonBox
 
-    from PySide6 import QtSvg
-    from PySide6.QtCore import Qt
-    from PySide6.QtCore import QObject
-except ImportError:
-    from PyQt5.QtGui import QStandardItemModel
-    from PyQt5.QtGui import QStandardItem
-    from PyQt5.QtGui import QPixmap
-    from PyQt5.QtGui import QIcon
-    from PyQt5.QtGui import QPainter
-    from PyQt5.QtGui import QPalette
+from PySide6.QtGui import QStandardItemModel
+from PySide6.QtGui import QStandardItem
+from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QIcon
+from PySide6.QtGui import QPainter
+from PySide6.QtGui import QPalette
+from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QHBoxLayout
+from PySide6.QtWidgets import QSplitter
+from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QTreeView
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMenu
+from PySide6.QtWidgets import QAbstractItemView
+from PySide6.QtWidgets import QScrollArea
+from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QFrame
+from PySide6.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QGroupBox
+from PySide6.QtWidgets import QRadioButton
+from PySide6.QtWidgets import QCheckBox
+from PySide6.QtWidgets import QLineEdit
+from PySide6.QtWidgets import QDialogButtonBox
 
-    from PyQt5.QtWidgets import QApplication
-    from PyQt5.QtWidgets import QMainWindow
-    from PyQt5.QtWidgets import QWidget
-    from PyQt5.QtWidgets import QHBoxLayout
-    from PyQt5.QtWidgets import QSplitter
-    from PyQt5.QtWidgets import QLabel
-    from PyQt5.QtWidgets import QTreeView
-    from PyQt5.QtWidgets import QAction
-    from PyQt5.QtWidgets import QMenu
-    from PyQt5.QtWidgets import QAbstractItemView
-    from PyQt5.QtWidgets import QScrollArea
-    from PyQt5.QtWidgets import QMessageBox
-    from PyQt5.QtWidgets import QDialog
-    from PyQt5.QtWidgets import QFrame
-    from PyQt5.QtWidgets import QVBoxLayout
-    from PyQt5.QtWidgets import QGroupBox
-    from PyQt5.QtWidgets import QRadioButton
-    from PyQt5.QtWidgets import QCheckBox
-    from PyQt5.QtWidgets import QLineEdit
-    from PyQt5.QtWidgets import QDialogButtonBox
-    from PyQt5 import QtSvg
-    from PyQt5.QtCore import Qt
-    from PyQt5.QtCore import QObject
-import hvcommon
+from PySide6 import QtSvg
+from PySide6.QtCore import Qt
+from PySide6.QtCore import QObject
+
+from hv import utils, config
+
 
 class HScrollArea(QScrollArea):
 
@@ -81,7 +52,7 @@ class HImage(QLabel):
         super().__init__(parent)
         self.parent = parent
         self.img = None
-        self.background = hvcommon.BACKGROUND_NONE
+        self.background = utils.BACKGROUND_NONE
         self.centered = False
         self.shrink = False
         self.zoom = False
@@ -99,7 +70,7 @@ class HImage(QLabel):
     def set_zoom(self, zoom = True):
         self.zoom = zoom
 
-    def set_background(self, background=hvcommon.BACKGROUND_NONE):
+    def set_background(self, background=utils.BACKGROUND_NONE):
         self.background = background
 
     def display(self):
@@ -112,31 +83,31 @@ class HImage(QLabel):
             shrink = False
             zoom = False
 
-            bigger = hvcommon.is_bigger_than_dp(
+            bigger = utils.is_bigger_than_dp(
                 pw, ph, w, h)
             if bigger and self.shrink:
-                (pw, ph) = hvcommon.calculate_shrink(
+                (pw, ph) = utils.calculate_shrink(
                     pw, ph, w, h, self.aspect)
                 shrink = True
             elif not bigger and self.zoom:
-                (pw, ph) = hvcommon.calculate_zoom(
+                (pw, ph) = utils.calculate_zoom(
                     pw, ph, w, h, self.aspect)
                 zoom = True
-            (aw, ah) = hvcommon.get_max_rect(
+            (aw, ah) = utils.get_max_rect(
                 w, h, pw, ph)
             pi = QPixmap(aw, ah)
-            if self.background == hvcommon.BACKGROUND_WHITE:
+            if self.background == utils.BACKGROUND_WHITE:
                 pi.fill(Qt.white)
-            elif self.background == hvcommon.BACKGROUND_BLACK:
+            elif self.background == utils.BACKGROUND_BLACK:
                 pi.fill(Qt.black)
-            elif self.background == hvcommon.BACKGROUND_GRID:
-                c = QPixmap(hvcommon.grid)
+            elif self.background == utils.BACKGROUND_GRID:
+                c = QPixmap(utils.grid)
                 pa = QPainter()
                 pa.begin(pi)
                 pa.drawTiledPixmap(0, 0, aw, ah, c)
                 pa.end()
-            elif self.background == hvcommon.BACKGROUND_CHECKERED:
-                c = QPixmap(hvcommon.checkers)
+            elif self.background == utils.BACKGROUND_CHECKERED:
+                c = QPixmap(utils.checkers)
                 pa = QPainter()
                 pa.begin(pi)
                 pa.drawTiledPixmap(0, 0, aw, ah, c)
@@ -144,7 +115,7 @@ class HImage(QLabel):
             else:
                 pi.fill(self.defaultbg)
             if self.centered:
-                (x, y) = hvcommon.get_location(aw, ah, pw, ph)
+                (x, y) = utils.get_location(aw, ah, pw, ph)
             else:
                 x, y = 0, 0
             if zoom or shrink:
@@ -158,7 +129,7 @@ class HImage(QLabel):
             pa.end()
             self.setPixmap(pi)
         else:
-            # TODO: image unavailable, do some generic here from hvcommon
+            # TODO: image unavailable, do some generic here from utils
             pass
 
     def display_file(self, filename):
@@ -231,12 +202,12 @@ class HPreferences(QDialog):
         config['aspect'] = self.check_aspect.isChecked()
         config['zoom'] = self.check_zoom.isChecked()
         config['shrink'] = self.check_shrink.isChecked()
-        config['background'] = hvcommon.BACKGROUND_NONE
-        btns = {self.radio_none: hvcommon.BACKGROUND_NONE,
-                self.radio_white: hvcommon.BACKGROUND_WHITE,
-                self.radio_black: hvcommon.BACKGROUND_BLACK,
-                self.radio_checkered: hvcommon.BACKGROUND_CHECKERED,
-                self.radio_grid: hvcommon.BACKGROUND_GRID}
+        config['background'] = utils.BACKGROUND_NONE
+        btns = {self.radio_none: utils.BACKGROUND_NONE,
+                self.radio_white: utils.BACKGROUND_WHITE,
+                self.radio_black: utils.BACKGROUND_BLACK,
+                self.radio_checkered: utils.BACKGROUND_CHECKERED,
+                self.radio_grid: utils.BACKGROUND_GRID}
         for btn in btns:
             if btn.isChecked():
                 config['background'] = btns[btn]
@@ -273,7 +244,7 @@ class HWindow(QMainWindow):
         self.configure(startupobj)
 
     def closeEvent(self, event):
-        hvcommon.saveconfig(self.get_configuration())
+        config.saveconfig(self.get_configuration())
         event.accept()
 
     def create_ui(self):
@@ -431,7 +402,7 @@ class HWindow(QMainWindow):
 
         r = 0
         fi = QIcon.fromTheme("image-x-generic", QIcon(":/image-x-generic.png"))
-        for f in hvcommon.getfiles(".", self.masks):
+        for f in utils.getfiles(".", self.masks):
             item = QStandardItem(f[0])
             item.setIcon(fi)
             self.filemodel.setItem(r, 0, item)
@@ -455,14 +426,14 @@ class HWindow(QMainWindow):
         r += 1
 
         i = QIcon.fromTheme("folder-pictures")
-        for d in hvcommon.getdirs("."):
+        for d in utils.getdirs("."):
             item = QStandardItem(d)
             item.setIcon(i)
             self.dirmodel.setItem(r, 0, item)
             r += 1
 
         i = QIcon.fromTheme("drive-harddisk")
-        for drive in hvcommon.get_drives():
+        for drive in utils.get_drives():
             item = QStandardItem("%(letter)s:\\" % {'letter': drive})
             item.setIcon(i)
             self.dirmodel.setItem(r, 0, item)
@@ -489,7 +460,7 @@ class HWindow(QMainWindow):
 
     def configure(self, startupobj):
         if startupobj:
-            self.set_configuration(hvcommon.readconfig(), False)
+            self.set_configuration(config.readconfig(), False)
             if os.path.isfile(startupobj):
                 dname = os.path.dirname(startupobj)
                 self.read_dir(dname)
@@ -499,7 +470,7 @@ class HWindow(QMainWindow):
             else:
                 self.read_dir()
         else:
-            self.set_configuration(hvcommon.readconfig(), True)
+            self.set_configuration(config.readconfig(), True)
             self.read_dir()
         self.update_title()
 
@@ -587,7 +558,7 @@ class HWindow(QMainWindow):
             self.settings['background'] = int(self.settings['background'])
             self.image.set_background(self.settings['background'])
         else:
-            self.settings['background'] = hvcommon.BACKGROUND_NONE
+            self.settings['background'] = utils.BACKGROUND_NONE
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

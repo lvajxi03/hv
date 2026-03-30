@@ -3,7 +3,7 @@
 import os
 import fnmatch
 import datetime
-import configparser
+
 
 have_windows = False
 
@@ -177,59 +177,6 @@ def getdirs_full(curdir="."):
     return []
 
 
-def saveconfig(configuration={}):
-    fh = open(os.path.join(os.path.expanduser("~"), ".hvrc"), "w")
-    cp = configparser.ConfigParser()
-    for key in configuration:
-        cp.add_section(key)
-        for subkey in configuration[key]:
-            try:
-                cp.set(key, subkey, configuration[key][subkey])
-            except TypeError:
-                cp.set(key, subkey, "1" if configuration[key][subkey] else "0")
-    cp.write(fh)
-    fh.close()
-
-
-def readconfig():
-    configuration = {}
-    try:
-        fh = open(os.path.join(os.path.expanduser("~"), ".hvrc"))
-        cp = configparser.ConfigParser()
-        cp.readfp(fh)
-        for section in cp.sections():
-            configuration[section] = {}
-            for tuple in cp.items(section):
-                configuration[section][tuple[0]] = tuple[1]
-        fh.close()
-    except IOError:
-        pass
-    except OSError:
-        pass
-    # Saturday night specials:
-    if 'settings' in configuration:
-        for key in ['centered', 'aspect', 'zoom', 'shrink', 'usemask']:
-            try:
-                if configuration['settings'][key] == 'True':
-                    configuration['settings'][key] = True
-                elif configuration['settings'][key] == '1':
-                    configuration['settings'][key] = True
-                else:
-                    configuration['settings'][key] = False
-            except KeyError:
-                configuration['settings'][key] = False
-    editors = []
-    if 'editors' in configuration:
-        for i in range(10):
-            try:
-                name = configuration['editors']['name%(n)d' % {'n': i}]
-                command = configuration['editors']['command%(n)d' % {'n': i}]
-                if name and command:
-                    editors.append((name, command))
-            except KeyError:
-                pass
-    configuration['editors'] = editors
-    return configuration
 
 
 checkers = [
