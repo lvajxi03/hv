@@ -10,7 +10,11 @@ import tomllib
 import tomli_w
 
 
-def saveconfig(configuration={}):
+def saveconfig(configuration: dict):
+    """
+    Save the configuration to a file
+    :param configuration: program configuration
+    """
     try:
         with open(os.path.join(os.path.expanduser("~"), ".hvrc"), "wb") as fh:
             tomli_w.dump(configuration, fh)
@@ -20,7 +24,11 @@ def saveconfig(configuration={}):
         pass
 
 
-def readconfig():
+def readconfig() -> dict:
+    """
+    Read configuration from a file
+    :return: program configuration
+    """
     configuration = {}
     try:
         with open(os.path.join(os.path.expanduser("~"), ".hvrc"), "rb") as f:
@@ -29,7 +37,7 @@ def readconfig():
         pass
     except OSError:
         pass
-    
+
     # Saturday night specials:
     if 'settings' in configuration:
         for key in ['centered', 'aspect', 'zoom', 'shrink', 'usemask']:

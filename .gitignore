@@ -8,4 +8,6 @@ __pycache_
 \#*.*#
 .venv
 vent
+dist/*
+*/*.egg-info
 

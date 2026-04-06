@@ -13,9 +13,9 @@ from .windows import HWindow
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     try:
-        so = sys.argv[1]
+        SO = sys.argv[1]
     except IndexError:
-        so = None
-    window = HWindow(so)
+        SO = None
+    window = HWindow(SO)
     window.show()
     sys.exit(app.exec())

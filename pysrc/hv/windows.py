@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
-import sys
+"""
+hv Main Window module
+"""
+
+
 import os
 
 from PySide6.QtGui import QStandardItemModel
@@ -34,203 +38,12 @@ from PySide6 import QtSvg
 from PySide6.QtCore import Qt
 from PySide6.QtCore import QObject
 
-from hv import utils, config
-
-
-class HScrollArea(QScrollArea):
-
-    def resizeEvent(self, new_size):
-        if self.image:
-            self.image.display()
-
-    def set_image(self, image=None):
-        self.image = image
-
-class HImage(QLabel):
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.parent = parent
-        self.img = None
-        self.background = utils.BACKGROUND_NONE
-        self.centered = False
-        self.shrink = False
-        self.zoom = False
-        self.aspect = True
-
-    def set_centered(self, centered = True):
-        self.centered = centered
-
-    def set_shrink(self, shrink = True):
-        self.shrink = shrink
-
-    def set_aspect(self, aspect = True):
-        self.aspect = aspect
-
-    def set_zoom(self, zoom = True):
-        self.zoom = zoom
-
-    def set_background(self, background=utils.BACKGROUND_NONE):
-        self.background = background
-
-    def display(self):
-        self.clear()
-        self.resize(1, 1)
-        (w, h) = self.parent.size().width(), self.parent.size().height()
-        if self.img:
-            pw, ph = self.img.size().width(), self.img.size().height()
-            copy = self.img
-            shrink = False
-            zoom = False
-
-            bigger = utils.is_bigger_than_dp(
-                pw, ph, w, h)
-            if bigger and self.shrink:
-                (pw, ph) = utils.calculate_shrink(
-                    pw, ph, w, h, self.aspect)
-                shrink = True
-            elif not bigger and self.zoom:
-                (pw, ph) = utils.calculate_zoom(
-                    pw, ph, w, h, self.aspect)
-                zoom = True
-            (aw, ah) = utils.get_max_rect(
-                w, h, pw, ph)
-            pi = QPixmap(aw, ah)
-            if self.background == utils.BACKGROUND_WHITE:
-                pi.fill(Qt.white)
-            elif self.background == utils.BACKGROUND_BLACK:
-                pi.fill(Qt.black)
-            elif self.background == utils.BACKGROUND_GRID:
-                c = QPixmap(utils.grid)
-                pa = QPainter()
-                pa.begin(pi)
-                pa.drawTiledPixmap(0, 0, aw, ah, c)
-                pa.end()
-            elif self.background == utils.BACKGROUND_CHECKERED:
-                c = QPixmap(utils.checkers)
-                pa = QPainter()
-                pa.begin(pi)
-                pa.drawTiledPixmap(0, 0, aw, ah, c)
-                pa.end()
-            else:
-                pi.fill(self.defaultbg)
-            if self.centered:
-                (x, y) = utils.get_location(aw, ah, pw, ph)
-            else:
-                x, y = 0, 0
-            if zoom or shrink:
-                copy = copy.scaled(pw, ph, Qt.IgnoreAspectRatio)
-            mask = copy.mask()
-            pa = QPainter()
-            pa.begin(pi)
-#            pa.setOpacity(0.5)
-            pa.setBackgroundMode(Qt.TransparentMode)
-            pa.drawPixmap(x, y, copy)
-            pa.end()
-            self.setPixmap(pi)
-        else:
-            # TODO: image unavailable, do some generic here from utils
-            pass
-
-    def display_file(self, filename):
-        p = QPixmap(filename)
-        self.img = p
-        self.origin = p
-        self.display()
-
-class HPreferences(QDialog):
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        vbox = QVBoxLayout(self)
-        vbox.setContentsMargins(0, 0, 0, 0)
-        gb = QGroupBox("Accepted filemasks")
-        v = QVBoxLayout()
-        self.usemasks = QCheckBox("Use filemasks:")
-        self.masks = QLineEdit()
-        v.addWidget(self.usemasks)
-        v.addWidget(self.masks)
-        gb.setLayout(v)
-        vbox.addWidget(gb)
-        hbox = QHBoxLayout(self)
-        hbox.setContentsMargins(0, 0, 0, 0)
-        gb = QGroupBox("Background")
-        v = QVBoxLayout()
-        self.radio_none = QRadioButton("None")
-        self.radio_white = QRadioButton("White")
-        self.radio_black = QRadioButton("Black")
-        self.radio_checkered = QRadioButton("Checkered")
-        self.radio_grid = QRadioButton("Grid")
-        v.addWidget(self.radio_none)
-        v.addWidget(self.radio_white)
-        v.addWidget(self.radio_black)
-        v.addWidget(self.radio_checkered)
-        v.addWidget(self.radio_grid)
-        gb.setLayout(v)
-        hbox.addWidget(gb)
-        gb = QGroupBox("Settings")
-        v = QVBoxLayout()
-        self.check_centered = QCheckBox("Centered")
-        self.check_aspect = QCheckBox("Aspect")
-        self.check_zoom = QCheckBox("Zoom to fit")
-        self.check_shrink = QCheckBox("Shrink to fit")
-        v.addWidget(self.check_centered)
-        v.addWidget(self.check_aspect)
-        v.addWidget(self.check_zoom)
-        v.addWidget(self.check_shrink)
-        gb.setLayout(v)
-        hbox.addWidget(gb)
-        w = QWidget(self)
-        w.setLayout(hbox)
-        vbox.addWidget(w)
-        frame = QFrame(self)
-        frame.setFrameShape(QFrame.HLine)
-        frame.setFrameShadow(QFrame.Sunken)
-        vbox.addWidget(frame)
-        bbox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        bbox.accepted.connect(self.accept)
-        bbox.rejected.connect(self.reject)
-        vbox.addWidget(bbox)
-        self.setLayout(vbox)
-        self.setWindowTitle("Preferences")
-        self.setContentsMargins(3, 3, 3, 3)
-        self.setWindowModality(Qt.ApplicationModal)
-
-    def get_config(self):
-        config = {}
-        config['centered'] = self.check_centered.isChecked()
-        config['aspect'] = self.check_aspect.isChecked()
-        config['zoom'] = self.check_zoom.isChecked()
-        config['shrink'] = self.check_shrink.isChecked()
-        config['background'] = utils.BACKGROUND_NONE
-        btns = {self.radio_none: utils.BACKGROUND_NONE,
-                self.radio_white: utils.BACKGROUND_WHITE,
-                self.radio_black: utils.BACKGROUND_BLACK,
-                self.radio_checkered: utils.BACKGROUND_CHECKERED,
-                self.radio_grid: utils.BACKGROUND_GRID}
-        for btn in btns:
-            if btn.isChecked():
-                config['background'] = btns[btn]
-        return config
-
-    def set_config(self, config={}):
-        self.check_centered.setChecked(config['centered'])
-        self.check_aspect.setChecked(config['aspect'])
-        self.check_zoom.setChecked(config['zoom'])
-        self.check_shrink.setChecked(config['shrink'])
-        btns = [self.radio_none, self.radio_white, self.radio_black,
-                self.radio_checkered, self.radio_grid]
-        if 'background' in config:
-            btns[int(config['background'])].setChecked(True)
-        else:
-            self.radio_none.setChecked(True)
-
-class HEditors(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Editors")
-        self.resize(640, 480)
-        self.setWindowModality(Qt.ApplicationModal)
+from hv import utils
+from hv import config
+from .image import HImage
+from .scrollarea import HScrollArea
+from .preferences import HPreferences
+from .editors import HEditors
 
 
 class HWindow(QMainWindow):
@@ -361,7 +174,7 @@ class HWindow(QMainWindow):
     def on_editor(self, item):
         (label, command) = self.editor_commands[item]
 
-    def update_editors(self, editors=[]):
+    def update_editors(self, editors: list):
         self.editors_menu.clear()
         self.editor_commands = {}
         for editor in editors:
@@ -434,7 +247,7 @@ class HWindow(QMainWindow):
 
         i = QIcon.fromTheme("drive-harddisk")
         for drive in utils.get_drives():
-            item = QStandardItem("%(letter)s:\\" % {'letter': drive})
+            item = QStandardItem("%{drive}:\\")
             item.setIcon(i)
             self.dirmodel.setItem(r, 0, item)
             r += 1
@@ -445,7 +258,7 @@ class HWindow(QMainWindow):
         item = self.dirmodel.item(index.row()).text()
         self.read_dir(item)
 
-    def filesel_changed(self, new_selection, old_selection):
+    def filesel_changed(self, new_selection, _):
         ilist = new_selection.indexes()
         if len(ilist) > 0:
             item = self.filemodel.item(ilist[0].row()).text()
@@ -456,7 +269,8 @@ class HWindow(QMainWindow):
 
 
     def update_title(self):
-        self.setWindowTitle("%(d)s - /hv/" % {'d': os.getcwd()})
+        cwd = os.getcwd()
+        self.setWindowTitle(f"{cwd} - /hv/")
 
     def configure(self, startupobj):
         if startupobj:
@@ -475,25 +289,27 @@ class HWindow(QMainWindow):
         self.update_title()
 
     def get_configuration(self):
-        config = {}
-        config['window'] = {}
-        config['window']['w'] = "%(w)d" % {'w': self.size().width()}
-        config['window']['h'] = "%(h)d" % {'h': self.size().height()}
-        config['window']['x'] = "%(x)d" % {'x': self.pos().x()}
-        config['window']['y'] = "%(y)d" % {'y': self.pos().y()}
-        config['browser'] = {}
-        config['browser']['size-x'] = ",".join(["%(n)d" % {'n': f} for f in self.hsplitter.sizes()])        
-        config['browser']['size-y'] = ",".join(["%(n)d" % {'n': f} for f in self.vsplitter.sizes()])
-        config['browser']['lastdir'] = os.getcwd()
-        config['settings'] = {}
-        config['settings']['filemasks'] = "|".join(self.masks)
-        for elem in ['centered', 'aspect', 'zoom', 'shrink']:            
-            config['settings'][elem] = '1' if self.settings[elem] else '0'
-        config['settings']['background'] = "%(b)d" % \
+        cfg_data = {}
+        cfg_data['window'] = {}
+        cfg_data['window']['w'] = "%(w)d" % {'w': self.size().width()}
+        cfg_data['window']['h'] = "%(h)d" % {'h': self.size().height()}
+        cfg_data['window']['x'] = "%(x)d" % {'x': self.pos().x()}
+        cfg_data['window']['y'] = "%(y)d" % {'y': self.pos().y()}
+        cfg_data['browser'] = {}
+        cfg_data['browser']['size-x'] = ",".join(
+            [f"{f}" for f in self.hsplitter.sizes()])
+        cfg_data['browser']['size-y'] = ",".join(
+            [f"{f}" for f in self.vsplitter.sizes()])
+        cfg_data['browser']['lastdir'] = os.getcwd()
+        cfg_data['settings'] = {}
+        cfg_data['settings']['filemasks'] = "|".join(self.masks)
+        for elem in ['centered', 'aspect', 'zoom', 'shrink']:
+            cfg_data['settings'][elem] = '1' if self.settings[elem] else '0'
+        cfg_data['settings']['background'] = "%(b)d" % \
             {'b': self.settings['background']}
-        return config
+        return cfg_data
 
-    def set_configuration(self, configuration={}, chdir=False):
+    def set_configuration(self, configuration: dict, chdir=False):
         try:
             x = int(configuration['window']['x'])
             y = int(configuration['window']['y'])
@@ -514,8 +330,6 @@ class HWindow(QMainWindow):
             pass
         except IOError:
             pass
-        except OSError:
-            pass
         try:
             sizex = configuration['browser']['size-x']
             sizes = [int(a.strip()) for a in sizex.split(",")]
@@ -527,7 +341,7 @@ class HWindow(QMainWindow):
             sizes = [int(a.strip()) for a in sizex.split(",")]
             self.vsplitter.setSizes(sizes)
         except KeyError:
-            pass        
+            pass
         try:
             self.settings = configuration['settings']
         except KeyError:
@@ -559,13 +373,3 @@ class HWindow(QMainWindow):
             self.image.set_background(self.settings['background'])
         else:
             self.settings['background'] = utils.BACKGROUND_NONE
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    try:
-        so = sys.argv[1]
-    except IndexError:
-        so = None
-    window = HWindow(so)
-    window.show()
-    sys.exit(app.exec_())
