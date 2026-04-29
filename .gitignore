@@ -1,3 +1,13 @@
 *.*~
 *.pyc
+*.bak
+*~
+__pycache_
+.\#*.*#
+.\#*.*
+\#*.*#
+.venv
+vent
+dist/*
+*/*.egg-info
 

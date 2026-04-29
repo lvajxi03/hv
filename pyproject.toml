@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hv"
+version = "0.0.0"
+authors = [
+	{name = "Marcin Bielewicz", email = "marcin.bielewicz@gmail.com"},
+]
+
+urls = {'Homepage' = 'https://hatamoto.pl/hv'}
+description = "Simple image viewer"
+readme = "README.md"
+requires-python = ">= 3.11"
+keywords = ["image", "viewer", "imgview", "svg"]
+license = { text = "GPL-3.0-or-later" }
+classifiers = [
+]
+
+dependencies = [
+	     "PySide6",
+	     "tomli_w"
+	     ]
+
+[tool.setuptools]
+package-dir = {"" = "pysrc"}
+include-package-data = true
+packages = ["hv",
+	 "hv.assets"]
+
+[tool.setuptools.package-data]
+"hv.assets" = ["*.xpm"]
